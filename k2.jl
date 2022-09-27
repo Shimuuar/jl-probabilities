@@ -5,7 +5,11 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 2da35dc6-39e7-11ed-2a0e-d1ca2c1a913d
-using Random: rand!, rand, default_rng
+begin
+	using Random
+	using Random: default_rng
+	using BenchmarkTools
+end
 
 # ╔═╡ 4b973702-a3af-4dc8-8681-00d385db287d
 begin
@@ -16,6 +20,33 @@ end
 
 # ╔═╡ 46ba3b09-091f-493c-97c9-1cabe247cb71
 md" ### Inversion sampling "
+
+# ╔═╡ ff38aa50-687e-41e9-a66c-60ff9750ae3d
+function inverse_sample!(
+    A ::Array{T},
+    inverse_cdf :: Function,
+    rng = default_rng(),
+    ;
+    inverse_cdf_kwargs...
+) where {T}
+
+	rand!(rng, A)
+	@. A = inverse_cdf(A; inverse_cdf_kwargs...)
+end
+
+# ╔═╡ 2c943380-5cfb-44a0-a74f-1329ac0a9795
+function inverse_sample(
+    dims,
+    inverse_cdf :: Function,
+    T ::Type{T_} = Float64,
+    rng = default_rng(),
+    ;
+    inverse_cdf_kwargs...
+) where {T_}
+
+	A = Array{T}(undef, dims)
+	return inverse_sample!(A, inverse_cdf, rng; inverse_cdf_kwargs...)
+end
 
 # ╔═╡ 3f0ea1bb-3f30-42f6-8f99-2483814f7b01
 md"""
@@ -34,118 +65,122 @@ x = - \frac{\ln(1 - y)}{\lambda}
 """
 
 # ╔═╡ f84eaf6b-3452-48dc-b6eb-0a7c5e14bf36
-exp_inverse_cdf(y; λ = 1.) = -log1p(-y) / λ
+exp_inverse_cdf_log1p(y; λ = 1.) = -log1p(-y) / λ
 
-# ╔═╡ ff38aa50-687e-41e9-a66c-60ff9750ae3d
-function inverse_sample(
-    dims,
-    inverse_cdf :: Function = exp_inverse_cdf,
-    T ::Type{T_} = Float64,
-    rng = default_rng(),
-    ;
-    inverse_cdf_kwargs...
-) where {T_}
-
-	A = rand(rng, T, dims)
-	@. A = inverse_cdf(A; inverse_cdf_kwargs...)
-end
+# ╔═╡ 5fe04f79-4f06-4b52-9ff2-aa87a5e2dad1
+exp_inverse_cdf_log(y; λ = 1.) = -log(y) / λ
 
 # ╔═╡ f8c72eab-ddf1-4c92-a4a5-7259c37aab56
 exp_pdf(x, λ) = λ * exp(-λ*x)
 
-# ╔═╡ cfddcdcf-9ae0-49ce-9156-025177f8dff3
-begin
-	N_samples = 10000
-	λ = 1.
-	exp_samples = inverse_sample(N_samples; λ)
-end
+# ╔═╡ 6261b62e-8be1-4037-b41e-d8b5a4e5937b
+md"""
+Сравним гистограммы.
+
+При использовании `log` и `log1p` гистограммы получаются одинаковые (даже при использовании `Float16`). Возможно, что на промежутке ``(0, 1)`` одна из них вызывает другую.
+"""
 
 # ╔═╡ 320a002e-016f-4936-a8f3-20145722f8b0
+# Можно отключать графики, кликая на легенду
 begin
-	plot(title = "Экспоненциальное распределение <br>λ = $λ, N = $N_samples", topmargin = 50Plots.px, legend = :right)
+	local bins = 0:0.1:8
+	local T = Float16
+	local λ :: T = 1.0
+	local N_samples = 500_000
 	
-	histogram!(exp_samples, label = "Экспериментально", normalize = true)
+	plot(title = "Экспоненциальное распределение <br>λ = $λ, N = $N_samples, T = $T", topmargin = 50Plots.px, legend = :right)
+	
+	histogram!(
+		inverse_sample(N_samples, exp_inverse_cdf_log1p, T; λ),
+		label = "with log1p", 
+		normalize = true,
+		opacity = 0.6
+		;
+		bins
+	)
 
-	xs = range(extrema(exp_samples)..., 100)
+	histogram!(
+		inverse_sample(N_samples, exp_inverse_cdf_log, T; λ),
+		label = "with log", 
+		normalize = true,
+		opacity = 0.6
+		;
+		bins
+	)
+
+	local xs = 0:0.1:8
 	plot!(xs, exp_pdf.(xs, λ), label = "Теоретически")
 end
 
-# ╔═╡ cfcaf824-3e76-4fae-8dbd-4e772d374a8c
-md" ### Biased modulo sampling "
-
-# ╔═╡ 3b343fc7-6ba6-46d6-a60c-c395959c26d2
-function modulo_sampling(
-		lim,
-		dims,
-		T ::Type{T_} = UInt8,
-		rng = default_rng()
-) where {T_<:Integer}
-
-	A = rand(rng, T, dims)
-	@. A = A % lim
-end
-
-# ╔═╡ 01b81dab-cc82-4888-a489-8c4ae26c6eb2
-lim = 170;
-
-# ╔═╡ 0595d9d0-d06b-4e0a-a921-193288432870
-mod_samples = modulo_sampling(lim, N_samples)
-
-# ╔═╡ 9b9b50ce-ca10-43ef-88b8-18ed36fba698
-histogram(mod_samples, bins = lim)
-
-# ╔═╡ 13ea3595-64fb-4ce6-afe8-267337fae7d5
-md"""
-### Division with rounding
-
-В статье рассматривались методы вида
-
-```math
-x = \text{rand\_int}() / \text{max\_int} \cdot \text{lim}
-```
-
-И в зависимости от порядка округления получался смещённый или несмещённый метод.
-"""
-
-# ╔═╡ 21beed3a-e5c7-45c2-94c3-d435468b75dd
-histogram([Int(floor(2^-8 * i * 35)) for i in 0 : (2^8 - 1)], bins = 35)
-
-# ╔═╡ 7387e1c5-30f8-44c1-9ddb-c95f9beb1c94
-histogram([Int(floor(i / floor(2^8/35))) for i in 0 : (2^8 - 1)], bins = 36)
-
 # ╔═╡ 368aa6c1-a79d-48eb-8a12-50297e18b3df
 md"""
-### Debiased Modulo (Once)
+### Performance
 """
 
-# ╔═╡ 54cb45ff-3e4c-4aed-9bab-5e727bf4d92c
-function modulo_and_reject_sampling(
-		lim,
-		dims,
-		T ::Type{T_} = UInt8,
-		rng = default_rng()
-) where {T_<:Integer}
+# ╔═╡ c569b4c5-deef-4cc6-bdc9-623824dd999b
+md"""
+Работа с динамической памятью и сборщиком мусора может вносить большой вклад во время работы алгоритма, поэтому создадим заранее один массив и будем его перезаписывать с помощью функций, оканчивающихся на восклицательный знак.
+"""
 
-	A = Array{T}(undef, dims)
+# ╔═╡ bec89ed9-8997-4454-89e5-f68f35349564
+test_array = Array{Float64}(undef, 10^6);
 
-	for i in eachindex(A)
-		a = rand(rng, T)
-		r = a % lim
-		while a - r > typemax(T) - lim
-			a = rand(rng, T)
-			r = a % lim
-		end
-		A[i] = r
-	end
+# ╔═╡ 7c24d18a-f106-402a-9d41-f5b3c7119cc4
+λ = 1.;
 
-	return A
-end
+# ╔═╡ d53e6699-0c81-4850-bb71-8099e0cd5b6e
+md"""
+Если передавать ``\lambda`` как параметр, то получается так:
+"""
 
-# ╔═╡ c2a61521-d88f-4ee7-b43f-bb031735c158
-mod_rej_samples = modulo_and_reject_sampling(lim, N_samples)
+# ╔═╡ fb66a285-e1bb-44a1-9451-9893e5a5018e
+@benchmark inverse_sample!(test_array, exp_inverse_cdf_log; λ)
 
-# ╔═╡ 3536d634-be59-4b1b-8d41-0f997c48f4bf
-histogram(mod_rej_samples, bins = lim)
+# ╔═╡ 47b53492-c486-40f0-a114-51d76cc8d89a
+
+
+# ╔═╡ 57ce16fb-b3ed-4e4b-a012-df058d942540
+md"""
+Если передавать ``\lambda`` внутри лямбда-функции, то получается медленнее. Кроме того, аллоцируется память. Вероятно, всему виной запускающаяся снова и снова jit-компиляция.
+"""
+
+# ╔═╡ 5dc2ea20-42f8-4a7f-a94a-908d160bf1c2
+@benchmark inverse_sample!(test_array, x -> exp_inverse_cdf_log(x; λ))
+
+# ╔═╡ 8273fa4f-d212-4bef-b672-5fd229acfff4
+@time inverse_sample!(test_array, x -> exp_inverse_cdf_log(x; λ));
+
+# ╔═╡ 9e984420-6848-4f86-a620-55e56b237864
+
+
+# ╔═╡ 529d6992-730e-4ce0-b7db-a963252a1a63
+md"""
+Если присвоить лямбда-функции имя, то это, кажется, позволяет избежать перекомпиляции. Производительность оказывается на том же уровне, как при использовании `kwargs`.
+"""
+
+# ╔═╡ 731d3904-6074-4d67-912c-fb019f13c82e
+foo = x -> exp_inverse_cdf_log(x; λ)
+
+# ╔═╡ 3e90d57a-26f3-4753-952e-7168216447bc
+@benchmark inverse_sample!(test_array, foo)
+
+# ╔═╡ aac95d24-3b59-4b63-b5d0-ffec1c82740e
+
+
+# ╔═╡ 41d1556a-fbe3-4fc1-9b51-39f8b315b39d
+md"""
+Функция randexp из стандартной библиотеки оказывается почти вдвое быстрее.
+
+Она не позволяет задать ``\lambda``, но из формулы для функции, обратной к CDF, видно, что мы можем просто разделить на ``\lambda`` в конце.
+"""
+
+# ╔═╡ 8a2d4e25-4d0b-438b-beeb-df8e35ba4c02
+@benchmark (randexp!(test_array); test_array ./= λ)
+
+# ╔═╡ 2efb13af-bbb6-4575-bd88-055d78684816
+md"""
+В [исходном коде](https://github.com/JuliaLang/julia/blob/master/stdlib/Random/src/normal.jl) это достигается трюками с битовыми масками и заранее известными массивами.
+"""
 
 # ╔═╡ 3ca937e3-5d85-4e42-b271-d8a4814536ff
 PUBLISH = true;
@@ -153,10 +188,12 @@ PUBLISH = true;
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
+BenchmarkTools = "~1.3.1"
 Plots = "~1.34.0"
 """
 
@@ -166,7 +203,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.1"
 manifest_format = "2.0"
-project_hash = "53806f6e3812a7e8cee90560890d4d910f31dcb8"
+project_hash = "64ecac07c406e3113520beffe41767d82b963422"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -177,6 +214,12 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+
+[[deps.BenchmarkTools]]
+deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
+git-tree-sha1 = "4c10eee4af024676200bc7752e536f858c6b8f93"
+uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+version = "1.3.1"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "84259bb6172806304b9101094a7cc4bc6f56dbc6"
@@ -699,6 +742,10 @@ version = "1.3.0"
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
+[[deps.Profile]]
+deps = ["Printf"]
+uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
+
 [[deps.Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
 git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
@@ -1087,26 +1134,34 @@ version = "1.4.1+0"
 
 # ╔═╡ Cell order:
 # ╠═2da35dc6-39e7-11ed-2a0e-d1ca2c1a913d
+# ╠═4b973702-a3af-4dc8-8681-00d385db287d
 # ╟─46ba3b09-091f-493c-97c9-1cabe247cb71
 # ╠═ff38aa50-687e-41e9-a66c-60ff9750ae3d
+# ╠═2c943380-5cfb-44a0-a74f-1329ac0a9795
 # ╟─3f0ea1bb-3f30-42f6-8f99-2483814f7b01
 # ╠═f84eaf6b-3452-48dc-b6eb-0a7c5e14bf36
+# ╠═5fe04f79-4f06-4b52-9ff2-aa87a5e2dad1
 # ╠═f8c72eab-ddf1-4c92-a4a5-7259c37aab56
-# ╠═4b973702-a3af-4dc8-8681-00d385db287d
-# ╠═cfddcdcf-9ae0-49ce-9156-025177f8dff3
+# ╟─6261b62e-8be1-4037-b41e-d8b5a4e5937b
 # ╠═320a002e-016f-4936-a8f3-20145722f8b0
-# ╟─cfcaf824-3e76-4fae-8dbd-4e772d374a8c
-# ╠═3b343fc7-6ba6-46d6-a60c-c395959c26d2
-# ╠═01b81dab-cc82-4888-a489-8c4ae26c6eb2
-# ╠═0595d9d0-d06b-4e0a-a921-193288432870
-# ╠═9b9b50ce-ca10-43ef-88b8-18ed36fba698
-# ╟─13ea3595-64fb-4ce6-afe8-267337fae7d5
-# ╠═21beed3a-e5c7-45c2-94c3-d435468b75dd
-# ╠═7387e1c5-30f8-44c1-9ddb-c95f9beb1c94
 # ╟─368aa6c1-a79d-48eb-8a12-50297e18b3df
-# ╠═54cb45ff-3e4c-4aed-9bab-5e727bf4d92c
-# ╠═c2a61521-d88f-4ee7-b43f-bb031735c158
-# ╠═3536d634-be59-4b1b-8d41-0f997c48f4bf
+# ╟─c569b4c5-deef-4cc6-bdc9-623824dd999b
+# ╠═bec89ed9-8997-4454-89e5-f68f35349564
+# ╠═7c24d18a-f106-402a-9d41-f5b3c7119cc4
+# ╟─d53e6699-0c81-4850-bb71-8099e0cd5b6e
+# ╠═fb66a285-e1bb-44a1-9451-9893e5a5018e
+# ╟─47b53492-c486-40f0-a114-51d76cc8d89a
+# ╟─57ce16fb-b3ed-4e4b-a012-df058d942540
+# ╠═5dc2ea20-42f8-4a7f-a94a-908d160bf1c2
+# ╠═8273fa4f-d212-4bef-b672-5fd229acfff4
+# ╟─9e984420-6848-4f86-a620-55e56b237864
+# ╟─529d6992-730e-4ce0-b7db-a963252a1a63
+# ╠═731d3904-6074-4d67-912c-fb019f13c82e
+# ╠═3e90d57a-26f3-4753-952e-7168216447bc
+# ╟─aac95d24-3b59-4b63-b5d0-ffec1c82740e
+# ╟─41d1556a-fbe3-4fc1-9b51-39f8b315b39d
+# ╠═8a2d4e25-4d0b-438b-beeb-df8e35ba4c02
+# ╟─2efb13af-bbb6-4575-bd88-055d78684816
 # ╠═3ca937e3-5d85-4e42-b271-d8a4814536ff
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
