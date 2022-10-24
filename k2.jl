@@ -117,6 +117,14 @@ md"""
 ### Performance
 """
 
+# ╔═╡ d8267749-efb8-42f4-95f0-bc657abcc373
+md"""
+Сравним варианты:
+1. когда ``\lambda`` передаётся как kwarg
+2. когда ``\lambda`` передаётся внутри замыкания
+3. функцию Random.randexp из стандартной библиотеки.
+"""
+
 # ╔═╡ c569b4c5-deef-4cc6-bdc9-623824dd999b
 md"""
 Работа с динамической памятью и сборщиком мусора может вносить большой вклад во время работы алгоритма, поэтому создадим заранее один массив и будем его перезаписывать с помощью функций, оканчивающихся на восклицательный знак.
@@ -127,6 +135,9 @@ test_array = Array{Float64}(undef, 10^6);
 
 # ╔═╡ 7c24d18a-f106-402a-9d41-f5b3c7119cc4
 λ = 1.;
+
+# ╔═╡ 6b5ba0af-e49b-4f77-b0f7-ad5dc117d08c
+
 
 # ╔═╡ d53e6699-0c81-4850-bb71-8099e0cd5b6e
 md"""
@@ -141,7 +152,7 @@ md"""
 
 # ╔═╡ 57ce16fb-b3ed-4e4b-a012-df058d942540
 md"""
-Если передавать ``\lambda`` внутри лямбда-функции, то получается медленнее. Кроме того, аллоцируется память. Вероятно, всему виной запускающаяся снова и снова jit-компиляция.
+Если передавать ``\lambda`` внутри лямбда-функции, то получается медленнее. Кроме того, jit-компиляция запускается снова и снова, и возникает нагрузка на сборщик мусора.
 """
 
 # ╔═╡ 5dc2ea20-42f8-4a7f-a94a-908d160bf1c2
@@ -151,18 +162,19 @@ md"""
 @time inverse_sample!(test_array, x -> exp_inverse_cdf_log(x; λ));
 
 # ╔═╡ 9e984420-6848-4f86-a620-55e56b237864
-
-
-# ╔═╡ 529d6992-730e-4ce0-b7db-a963252a1a63
 md"""
-Если присвоить лямбда-функции имя, то это, кажется, позволяет избежать перекомпиляции. Производительность оказывается на том же уровне, как при использовании `kwargs`.
+В статье ["Performance tips"](https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-captured) из документации Julia написано, что это происходит из-за того, что в замыкание попадает не значение переменной, а ссылка на неё, причём типа Any.
+
+Там предлагается указать тип или использовать конструкцию `let ... end`. 
+
+Это действительно помогает, и скорость оказывается такой же, как и при использовании kwargs.
 """
 
-# ╔═╡ 731d3904-6074-4d67-912c-fb019f13c82e
-foo = x -> exp_inverse_cdf_log(x; λ)
+# ╔═╡ 7dfff5b8-1f7b-4511-a4f9-ea828682c842
+@benchmark inverse_sample!(test_array, x -> exp_inverse_cdf_log(x; λ = λ :: Float64))
 
 # ╔═╡ 3e90d57a-26f3-4753-952e-7168216447bc
-@benchmark inverse_sample!(test_array, foo)
+@benchmark inverse_sample!(test_array, let λ = λ; x -> exp_inverse_cdf_log(x; λ) end)
 
 # ╔═╡ aac95d24-3b59-4b63-b5d0-ffec1c82740e
 
@@ -201,7 +213,7 @@ Plots = "~1.34.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.1"
+julia_version = "1.8.2"
 manifest_format = "2.0"
 project_hash = "64ecac07c406e3113520beffe41767d82b963422"
 
@@ -339,10 +351,10 @@ uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
 version = "0.4.1"
 
 [[deps.FFMPEG_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
-git-tree-sha1 = "ccd479984c7838684b3ac204b716c89955c76623"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Pkg", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
+git-tree-sha1 = "74faea50c1d007c85837327f6775bea60b5492dd"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
-version = "4.4.2+0"
+version = "4.4.2+2"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -686,6 +698,11 @@ git-tree-sha1 = "85f8e6578bf1f9ee0d11e7bb1b1456435479d47c"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.4.1"
 
+[[deps.PCRE2_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
+version = "10.40.0+0"
+
 [[deps.PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "b2a7af664e098055a7529ad1a900ded962bca488"
@@ -860,7 +877,7 @@ version = "1.0.0"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.0"
+version = "1.10.1"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1145,9 +1162,11 @@ version = "1.4.1+0"
 # ╟─6261b62e-8be1-4037-b41e-d8b5a4e5937b
 # ╠═320a002e-016f-4936-a8f3-20145722f8b0
 # ╟─368aa6c1-a79d-48eb-8a12-50297e18b3df
+# ╟─d8267749-efb8-42f4-95f0-bc657abcc373
 # ╟─c569b4c5-deef-4cc6-bdc9-623824dd999b
 # ╠═bec89ed9-8997-4454-89e5-f68f35349564
 # ╠═7c24d18a-f106-402a-9d41-f5b3c7119cc4
+# ╟─6b5ba0af-e49b-4f77-b0f7-ad5dc117d08c
 # ╟─d53e6699-0c81-4850-bb71-8099e0cd5b6e
 # ╠═fb66a285-e1bb-44a1-9451-9893e5a5018e
 # ╟─47b53492-c486-40f0-a114-51d76cc8d89a
@@ -1155,8 +1174,7 @@ version = "1.4.1+0"
 # ╠═5dc2ea20-42f8-4a7f-a94a-908d160bf1c2
 # ╠═8273fa4f-d212-4bef-b672-5fd229acfff4
 # ╟─9e984420-6848-4f86-a620-55e56b237864
-# ╟─529d6992-730e-4ce0-b7db-a963252a1a63
-# ╠═731d3904-6074-4d67-912c-fb019f13c82e
+# ╠═7dfff5b8-1f7b-4511-a4f9-ea828682c842
 # ╠═3e90d57a-26f3-4753-952e-7168216447bc
 # ╟─aac95d24-3b59-4b63-b5d0-ffec1c82740e
 # ╟─41d1556a-fbe3-4fc1-9b51-39f8b315b39d
