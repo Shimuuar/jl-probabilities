@@ -68,25 +68,31 @@ x = - \frac{\ln(1 - y)}{\lambda}
 exp_inverse_cdf_log1p(y; λ = 1.) = -log1p(-y) / λ
 
 # ╔═╡ 5fe04f79-4f06-4b52-9ff2-aa87a5e2dad1
+# `y` и `1-y` распределены одинаково
 exp_inverse_cdf_log(y; λ = 1.) = -log(y) / λ
 
 # ╔═╡ f8c72eab-ddf1-4c92-a4a5-7259c37aab56
 exp_pdf(x, λ) = λ * exp(-λ*x)
 
+# ╔═╡ ccecd05d-d2fe-48b7-af1b-e5b8e1c363b9
+md" #### Сравним гистограммы для `log` и `log1p` "
+
 # ╔═╡ 6261b62e-8be1-4037-b41e-d8b5a4e5937b
 md"""
-Сравним гистограммы.
-
 При использовании `log` и `log1p` гистограммы получаются одинаковые (даже при использовании `Float16`). Возможно, что на промежутке ``(0, 1)`` одна из них вызывает другую.
 """
+
+# ╔═╡ edb099c3-2215-4166-bd98-86f3882e2f96
+begin
+	T = Float16
+	λ = 1.0
+end
 
 # ╔═╡ 320a002e-016f-4936-a8f3-20145722f8b0
 # Можно отключать графики, кликая на легенду
 begin
+	N_samples = 500_000
 	local bins = 0:0.1:8
-	local T = Float16
-	local λ :: T = 1.0
-	local N_samples = 500_000
 	
 	plot(title = "Экспоненциальное распределение <br>λ = $λ, N = $N_samples, T = $T", topmargin = 50Plots.px, legend = :right)
 	
@@ -112,6 +118,52 @@ begin
 	plot!(xs, exp_pdf.(xs, λ), label = "Теоретически")
 end
 
+# ╔═╡ e50bfc54-5225-4964-a649-2e853c8c875d
+md"""
+По какой-то причине в хвосте обеих гистограмм между столбиками есть пропуски. Вот как они выглядят вблизи:
+"""
+
+# ╔═╡ bf37f608-60d7-4fd4-afb1-a3b82ed760d0
+begin
+	bins = 6:0.01:8
+
+	plot(title = "Хвост симулированного распределения <br>λ = $λ, N = $N_samples, T = $T", topmargin = 50Plots.px, legend = :right, ylabel = "count",)
+	
+	histogram!(
+		inverse_sample(N_samples, exp_inverse_cdf_log1p, T; λ);
+		bins,
+		label = "with log1p",
+		opacity = 0.6
+	)
+	histogram!(
+		inverse_sample(N_samples, exp_inverse_cdf_log1p, T; λ);
+		bins,
+		label = "with log",
+		opacity = 0.6
+	)
+end
+
+# ╔═╡ 486ef31c-fe03-4a10-8e3c-16dda9a95a0c
+md"""
+Я предположил, что это возникает из-за того, что при логарифмировании числа $T некоторые числа нельзя получить, и именно они ответственны за пропуски.
+
+Но это не так. Я посчитал логарифмы всех чисел $T по порядку и построил гистаграмму. При использовании того же размера бина пропусков нет. Следовательно, пропуски возникают не из-за логарифмирования, а из-за особенностей дефолтной функции rand.
+"""
+
+# ╔═╡ af1323bf-7c63-4c5a-8352-7e6f7df320c3
+begin
+	local N = 15 * 2^10
+	succesive_floats = Array{T}(undef, N)
+	succesive_floats[1] = 0.
+	for i in 2:N
+		succesive_floats[i] = nextfloat(succesive_floats[i - 1])
+	end
+	successive_logarithms = -log.(succesive_floats)
+end
+
+# ╔═╡ 6d757979-be10-41fc-a25e-855ebd5ce2df
+histogram(successive_logarithms; bins)
+
 # ╔═╡ 368aa6c1-a79d-48eb-8a12-50297e18b3df
 md"""
 ### Performance
@@ -125,16 +177,12 @@ md"""
 3. функцию Random.randexp из стандартной библиотеки.
 """
 
-# ╔═╡ c569b4c5-deef-4cc6-bdc9-623824dd999b
-md"""
-Работа с динамической памятью и сборщиком мусора может вносить большой вклад во время работы алгоритма, поэтому создадим заранее один массив и будем его перезаписывать с помощью функций, оканчивающихся на восклицательный знак.
-"""
-
 # ╔═╡ bec89ed9-8997-4454-89e5-f68f35349564
+# Работа с динамической памятью и сборщиком мусора
+# может вносить большой вклад во время работы алгоритма,
+# поэтому создадим заранее один массив и будем его перезаписывать
+# с помощью функций, оканчивающихся на восклицательный знак.
 test_array = Array{Float64}(undef, 10^6);
-
-# ╔═╡ 7c24d18a-f106-402a-9d41-f5b3c7119cc4
-λ = 1.;
 
 # ╔═╡ 6b5ba0af-e49b-4f77-b0f7-ad5dc117d08c
 
@@ -233,11 +281,6 @@ git-tree-sha1 = "4c10eee4af024676200bc7752e536f858c6b8f93"
 uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 version = "1.3.1"
 
-[[deps.BitFlags]]
-git-tree-sha1 = "84259bb6172806304b9101094a7cc4bc6f56dbc6"
-uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
-version = "0.1.5"
-
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "19a35467a82e236ff51bc17a3a44b69ef35185a2"
@@ -261,12 +304,6 @@ deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
 git-tree-sha1 = "38f7a08f19d8810338d4f5085211c7dfa5d5bdd8"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 version = "0.1.4"
-
-[[deps.CodecZlib]]
-deps = ["TranscodingStreams", "Zlib_jll"]
-git-tree-sha1 = "ded953804d019afa9a3f98981d99b33e3db7b6da"
-uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
-version = "0.7.0"
 
 [[deps.ColorSchemes]]
 deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Random"]
@@ -294,9 +331,9 @@ version = "0.12.8"
 
 [[deps.Compat]]
 deps = ["Dates", "LinearAlgebra", "UUIDs"]
-git-tree-sha1 = "5856d3031cdb1f3b2b6340dfdc66b6d9a149a374"
+git-tree-sha1 = "3ca828fe1b75fa84b021a7860bd039eaea84d2f2"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.2.0"
+version = "4.3.0"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -309,9 +346,9 @@ uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.2"
 
 [[deps.DataAPI]]
-git-tree-sha1 = "1106fa7e1256b402a86a8e7b15c00c85036fef49"
+git-tree-sha1 = "46d2680e618f8abd007bce0c3026cb0c4a8f2032"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
-version = "1.11.0"
+version = "1.12.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -329,9 +366,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
-git-tree-sha1 = "5158c2b41018c5f7eb1470d558127ac274eca0c9"
+git-tree-sha1 = "c36550cb29cbe373e95b3f40486b9a4148f89ffd"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-version = "0.9.1"
+version = "0.9.2"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -403,9 +440,9 @@ version = "0.68.0"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "ad86229227847772bb985cc1dd3b842ff61317a7"
+git-tree-sha1 = "bc9f7725571ddb4ab2c4bc74fa397c1c5ad08943"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.69.0+0"
+version = "0.69.1+0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -414,10 +451,10 @@ uuid = "78b55507-aeef-58d4-861c-77aaff3498b1"
 version = "0.21.0+0"
 
 [[deps.Glib_jll]]
-deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "a32d672ac2c967f3deb8a81d828afc739c838a06"
+deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE2_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "fb83fbe02fe57f2c068013aa94bcdf6760d3a7a7"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.68.3+2"
+version = "2.74.0+1"
 
 [[deps.Graphite2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -431,10 +468,10 @@ uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
 version = "1.0.2"
 
 [[deps.HTTP]]
-deps = ["Base64", "CodecZlib", "Dates", "IniFile", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "4abede886fcba15cd5fd041fef776b230d004cee"
+deps = ["Base64", "Dates", "IniFile", "Logging", "MbedTLS", "NetworkOptions", "Sockets", "URIs"]
+git-tree-sha1 = "0fa77022fe4b511826b39c894c90daf5fce3334a"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.4.0"
+version = "0.9.17"
 
 [[deps.HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
@@ -453,9 +490,9 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[deps.InverseFunctions]]
 deps = ["Test"]
-git-tree-sha1 = "b3364212fb5d870f724876ffcd34dd8ec6d98918"
+git-tree-sha1 = "49510dfcb407e572524ba94aeae2fced1f3feb0f"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "7fd44fd4ff43fc60815f8e764c0f352b83c49151"
@@ -598,17 +635,11 @@ version = "0.3.18"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
-[[deps.LoggingExtras]]
-deps = ["Dates", "Logging"]
-git-tree-sha1 = "5d4d2d9904227b8bd66386c1138cf4d5ffa826bf"
-uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
-version = "0.4.9"
-
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
-git-tree-sha1 = "3d3e902b31198a27340d0bf00d6ac452866021cf"
+git-tree-sha1 = "42324d08725e200c23d4dfb549e0d5d89dede2d2"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.9"
+version = "0.5.10"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -616,9 +647,9 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[deps.MbedTLS]]
 deps = ["Dates", "MbedTLS_jll", "MozillaCACerts_jll", "Random", "Sockets"]
-git-tree-sha1 = "6872f9594ff273da6d13c7c1a1545d5a8c7d0c1c"
+git-tree-sha1 = "03a9b9718f5682ecb107ac9f7308991db4ce395b"
 uuid = "739be429-bea8-5141-9913-cc70e7f3736d"
-version = "1.1.6"
+version = "1.1.7"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -669,12 +700,6 @@ deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
 version = "0.8.1+0"
 
-[[deps.OpenSSL]]
-deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "fa44e6aa7dfb963746999ca8129c1ef2cf1c816b"
-uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.1.1"
-
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "e60321e3f2616584ff98f0a4f18d98ae6f89bbb3"
@@ -703,17 +728,11 @@ deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 version = "10.40.0+0"
 
-[[deps.PCRE_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "b2a7af664e098055a7529ad1a900ded962bca488"
-uuid = "2f80f16e-611a-54ab-bc61-aa92de5b98fc"
-version = "8.44.0+0"
-
 [[deps.Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "3d5bf43e3e8b412656404ed9466f1dcbf7c50269"
+git-tree-sha1 = "6c01a9b494f6d2a9fc180a08b182fcb06f0958a0"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.4.0"
+version = "2.4.2"
 
 [[deps.Pipe]]
 git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
@@ -733,9 +752,9 @@ version = "1.8.0"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
-git-tree-sha1 = "8162b2f8547bc23876edd0c5181b27702ae58dce"
+git-tree-sha1 = "1f03a2d339f42dca4a4da149c7e15e9b896ad899"
 uuid = "ccf2f8ad-2431-5c83-bf29-c5338b663b6a"
-version = "3.0.0"
+version = "3.1.0"
 
 [[deps.PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "SnoopPrecompile", "Statistics"]
@@ -778,15 +797,16 @@ deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[deps.RecipesBase]]
-git-tree-sha1 = "6bf3f380ff52ce0832ddd3a2a7b9538ed1bcca7d"
+deps = ["SnoopPrecompile"]
+git-tree-sha1 = "d12e612bba40d189cead6ff857ddb67bd2e6a387"
 uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-version = "1.2.1"
+version = "1.3.1"
 
 [[deps.RecipesPipeline]]
-deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase"]
-git-tree-sha1 = "e7eac76a958f8664f2718508435d058168c7953d"
+deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase", "SnoopPrecompile"]
+git-tree-sha1 = "9b1c0c8e9188950e66fc28f40bfe0f8aac311fe0"
 uuid = "01d81517-befc-4cb6-b9ec-a95719d0359c"
-version = "0.6.3"
+version = "0.6.7"
 
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -823,11 +843,6 @@ deps = ["Dates", "Grisu"]
 git-tree-sha1 = "91eddf657aca81df9ae6ceb20b959ae5653ad1de"
 uuid = "992d4aef-0814-514b-bc4d-f2e9a6c4116f"
 version = "1.0.3"
-
-[[deps.SimpleBufferStream]]
-git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"
-uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
-version = "1.1.0"
 
 [[deps.SnoopPrecompile]]
 git-tree-sha1 = "f604441450a3c0569830946e5b33b78c928e1a85"
@@ -888,12 +903,6 @@ version = "0.1.1"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[[deps.TranscodingStreams]]
-deps = ["Random", "Test"]
-git-tree-sha1 = "8a75929dcd3c38611db2f8d08546decb514fcadf"
-uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.9.9"
 
 [[deps.URIs]]
 git-tree-sha1 = "e59ecc5a41b000fa94423a578d29290c7266fc10"
@@ -1159,13 +1168,18 @@ version = "1.4.1+0"
 # ╠═f84eaf6b-3452-48dc-b6eb-0a7c5e14bf36
 # ╠═5fe04f79-4f06-4b52-9ff2-aa87a5e2dad1
 # ╠═f8c72eab-ddf1-4c92-a4a5-7259c37aab56
+# ╟─ccecd05d-d2fe-48b7-af1b-e5b8e1c363b9
 # ╟─6261b62e-8be1-4037-b41e-d8b5a4e5937b
+# ╠═edb099c3-2215-4166-bd98-86f3882e2f96
 # ╠═320a002e-016f-4936-a8f3-20145722f8b0
+# ╟─e50bfc54-5225-4964-a649-2e853c8c875d
+# ╠═bf37f608-60d7-4fd4-afb1-a3b82ed760d0
+# ╟─486ef31c-fe03-4a10-8e3c-16dda9a95a0c
+# ╠═6d757979-be10-41fc-a25e-855ebd5ce2df
+# ╠═af1323bf-7c63-4c5a-8352-7e6f7df320c3
 # ╟─368aa6c1-a79d-48eb-8a12-50297e18b3df
 # ╟─d8267749-efb8-42f4-95f0-bc657abcc373
-# ╟─c569b4c5-deef-4cc6-bdc9-623824dd999b
 # ╠═bec89ed9-8997-4454-89e5-f68f35349564
-# ╠═7c24d18a-f106-402a-9d41-f5b3c7119cc4
 # ╟─6b5ba0af-e49b-4f77-b0f7-ad5dc117d08c
 # ╟─d53e6699-0c81-4850-bb71-8099e0cd5b6e
 # ╠═fb66a285-e1bb-44a1-9451-9893e5a5018e
