@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 4506d47e-7c17-46f2-a153-ed3b0b736d11
-expr = :(12x+4)
+expr = :(12x + 4 + 4)
 
 # ╔═╡ 4d3d8a39-c815-4ad9-a792-cec8be8c0186
 expr.args
@@ -46,7 +46,12 @@ end
 substitute_vars(:(12x+4), (; x = 2))
 
 # ╔═╡ e6350425-f8e5-42ac-9aa8-b86ec0dde470
-function fold_commuting_consts!(args::Array)
+function fold_commuting_consts!(args::Array) :: Union{Number, Nothing}
+	# Вычисляет выражение настолько, насколько это возможно,
+	# и изменяет масссив args.
+	# Если выражение удалось вычислить полностью, то возвращет результат,
+	# иначе возвращает nothing
+
 	for i ∈ 2 : length(args)
 		if isa(args[i], Expr)
 			res = fold_commuting_consts!(args[i].args)
@@ -58,19 +63,27 @@ function fold_commuting_consts!(args::Array)
 
 	where_numbers = isa.(args, Number)
 	n_numbers = sum(where_numbers)
-	if n_numbers > 1
-		func = getfield(Base, args[1])
+	if n_numbers > 1                     # Если констант > 1, то их можно свернуть  
+		func = getfield(Base, args[1])   # func - это, например, Base.:+
 		res = func(args[where_numbers]...)
 		if n_numbers == length(args) - 1
 			return res
 		else
-			vars_and_exprs = args[.!where_numbers]
-			resize!(args, length(vars_and_exprs) + 1)
-			args[2] = res
-			@. args[3:end] = vars_and_exprs[2:end]
-			return nothing
+			# если кроме чисел были выражения и и переменные,
+			# то изменим массив expr.args следующим образом:
+			# [:+, 1, 2, 3, x] -> [:+, x, 6]
+			@. args[1 : end-n_numbers] = args[.!where_numbers]
+			resize!(args, length(args) - n_numbers + 1)
+			args[end] = res
 		end
 	end
+	return nothing
+end
+
+# ╔═╡ 77b328af-3ba1-4f1a-ac1b-1b41be2f3268
+begin
+	a = [3, 4, 5]
+	@. a[1:end-1] = a[2:end]
 end
 
 # ╔═╡ 4c95167f-429b-410e-b777-1925ce3b9b29
@@ -98,11 +111,11 @@ end
 # ╔═╡ e60660d4-c59a-4ca1-b6a2-96729f28512f
 md"Тесты:"
 
+# ╔═╡ f87cec96-b7ee-4dfa-a6d5-2ce508857bce
+evaluate(:(12x + 4 + 4), (; x = 2))
+
 # ╔═╡ 89a6a39f-bf6a-4c4c-9626-b239dc70bbb5
 fold_commuting_consts(:(x + 2 + 3*18*y + 4))
-
-# ╔═╡ f87cec96-b7ee-4dfa-a6d5-2ce508857bce
-evaluate(:(12x+4), (; x = 2))
 
 # ╔═╡ 75296fe5-db59-44b2-885a-9c2894757f8b
 evaluate(:(x + 2 + 3*18*y + 4), (; x = 0.5, y = -1))
@@ -135,11 +148,12 @@ project_hash = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 # ╠═062fee94-160a-4092-ad2d-490582f2110f
 # ╠═a32df432-35cf-49d3-be88-f65ae7601c7f
 # ╠═e6350425-f8e5-42ac-9aa8-b86ec0dde470
+# ╠═77b328af-3ba1-4f1a-ac1b-1b41be2f3268
 # ╠═4c95167f-429b-410e-b777-1925ce3b9b29
 # ╠═5064e19c-ae48-45fd-a1b5-488064e97f01
 # ╟─e60660d4-c59a-4ca1-b6a2-96729f28512f
-# ╠═89a6a39f-bf6a-4c4c-9626-b239dc70bbb5
 # ╠═f87cec96-b7ee-4dfa-a6d5-2ce508857bce
+# ╠═89a6a39f-bf6a-4c4c-9626-b239dc70bbb5
 # ╠═75296fe5-db59-44b2-885a-9c2894757f8b
 # ╠═d0b16392-8079-4915-bdf9-00fcbd6c0f2f
 # ╟─00000000-0000-0000-0000-000000000001
