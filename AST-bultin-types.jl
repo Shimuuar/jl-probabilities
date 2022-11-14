@@ -7,6 +7,9 @@ using InteractiveUtils
 # ╔═╡ 4506d47e-7c17-46f2-a153-ed3b0b736d11
 expr = :(12x+4)
 
+# ╔═╡ 4d3d8a39-c815-4ad9-a792-cec8be8c0186
+expr.args
+
 # ╔═╡ be0ec276-16d6-4501-b600-0f8ef2168ace
 vars = (;x = 2)
 
@@ -92,6 +95,9 @@ function evaluate(expr::Expr, vars)
 	end
 end
 
+# ╔═╡ e60660d4-c59a-4ca1-b6a2-96729f28512f
+md"Тесты:"
+
 # ╔═╡ 89a6a39f-bf6a-4c4c-9626-b239dc70bbb5
 fold_commuting_consts(:(x + 2 + 3*18*y + 4))
 
@@ -122,6 +128,7 @@ project_hash = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 # ╔═╡ Cell order:
 # ╠═4506d47e-7c17-46f2-a153-ed3b0b736d11
+# ╠═4d3d8a39-c815-4ad9-a792-cec8be8c0186
 # ╠═be0ec276-16d6-4501-b600-0f8ef2168ace
 # ╟─d912cc35-c1cc-42f3-b082-2e0242bdf2e9
 # ╠═aa41b155-bcf5-4aaa-90dc-380023e2ca57
@@ -130,6 +137,7 @@ project_hash = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 # ╠═e6350425-f8e5-42ac-9aa8-b86ec0dde470
 # ╠═4c95167f-429b-410e-b777-1925ce3b9b29
 # ╠═5064e19c-ae48-45fd-a1b5-488064e97f01
+# ╟─e60660d4-c59a-4ca1-b6a2-96729f28512f
 # ╠═89a6a39f-bf6a-4c4c-9626-b239dc70bbb5
 # ╠═f87cec96-b7ee-4dfa-a6d5-2ce508857bce
 # ╠═75296fe5-db59-44b2-885a-9c2894757f8b
