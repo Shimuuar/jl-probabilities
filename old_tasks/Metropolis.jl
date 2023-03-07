@@ -13,6 +13,9 @@ begin
 	plotly()
 end;
 
+# ╔═╡ e2564151-c5d5-41e3-b999-bcd08c27259b
+using SpecialFunctions: beta
+
 # ╔═╡ 5ecc51f0-641c-11ed-12cc-8dcbc7a83b98
 function cosine_pdf(x)
 	if -2π < x < 2π
@@ -30,6 +33,15 @@ end
 
 # ╔═╡ 353fc989-658c-4109-93eb-b80478d59d8e
 log_cosine_pdf = log ∘ cosine_pdf
+
+# ╔═╡ 85205a12-84a9-4bf3-806c-b380877c21bb
+function beta_pdf(p; O = 8, R = 2)
+	if 0 ≤ p ≤ 1
+		return p^O * (1-p)^R
+	else
+		return zero(p)
+	end
+end
 
 # ╔═╡ f8768042-5b5d-4bb1-89d7-9799348003df
 function sample_metropolis!(A, pdf, seed, randgen; randgen_params...)
@@ -101,23 +113,56 @@ end
 # ╔═╡ 0ead99dd-88c2-41ab-a123-3e42dcd2612d
 plot(sample_metropolis(cosine_pdf, 0, () -> 1000randn(), 2000))
 
+# ╔═╡ 7852c56b-a482-4c9f-af4b-6b6803d351dd
+begin
+	local x = 0:0.01:1
+	histogram(
+		sample_metropolis(beta_pdf, 0, () -> 0.5randn(), 10000),
+		normalize = :pdf,
+		bins = 50,
+		legend = false,
+		xlabel = "p"
+	)
+	plot!(x, beta_pdf.(x) ./ beta(9, 3), linewidth = 4)
+end
+
+# ╔═╡ 002da90e-c1ad-4459-b790-32a50d93235b
+a = rand(Float32, 10_000_000)
+
+# ╔═╡ 004bb380-3f02-44be-bde9-df315837457a
+sort(a ./ eps(Float32))
+
+# ╔═╡ f837fe34-0257-463b-80cb-f5f022c535d5
+floatmin(Float32) / eps(Float32)
+
+# ╔═╡ 0652d0eb-ca7d-4aa5-b699-2af2e5b53293
+floatmin(Float32)
+
+# ╔═╡ 657b2bbd-7c75-4e49-aa9e-0d8af86b042b
+eps(Float32)
+
+# ╔═╡ 7e71d71e-94b9-4333-86d7-280049a8f0ca
+2^-32
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [compat]
 Plots = "~1.36.1"
+SpecialFunctions = "~2.1.7"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.2"
+julia_version = "1.8.3"
 manifest_format = "2.0"
-project_hash = "45996fb1f24aa3f18f3b0a5e472b2567422a13f1"
+project_hash = "fc6d32cbb81a39202ca6c1081897b85489d38309"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -311,9 +356,9 @@ version = "0.21.0+0"
 
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE2_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "fb83fbe02fe57f2c068013aa94bcdf6760d3a7a7"
+git-tree-sha1 = "d3b3624125c1474292d0d8ed0f65554ac37ddb23"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.74.0+1"
+version = "2.74.0+2"
 
 [[deps.Graphite2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -459,9 +504,9 @@ version = "1.42.0+0"
 
 [[deps.Libiconv_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "42b62845d70a619f063a7da093d995ec8e15e778"
+git-tree-sha1 = "c7cb1f5d892775ba13767a87c7ada0b980ea0a71"
 uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
-version = "1.16.1+1"
+version = "1.16.1+2"
 
 [[deps.Libmount_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1042,6 +1087,7 @@ version = "1.4.1+0"
 # ╠═5ecc51f0-641c-11ed-12cc-8dcbc7a83b98
 # ╠═2c238c5b-fcc3-4192-a3f6-ed6322028a16
 # ╠═353fc989-658c-4109-93eb-b80478d59d8e
+# ╠═85205a12-84a9-4bf3-806c-b380877c21bb
 # ╠═f8768042-5b5d-4bb1-89d7-9799348003df
 # ╠═c62ddac0-f8a1-488a-827c-50af481ee891
 # ╠═95312f59-e035-4716-a99c-fe2d6ca86079
@@ -1052,5 +1098,13 @@ version = "1.4.1+0"
 # ╟─fb988f95-a125-45e2-b193-9dec4ca4dfd1
 # ╠═db95d1b8-9ceb-4e49-bbd5-eef2c4260e2c
 # ╠═0ead99dd-88c2-41ab-a123-3e42dcd2612d
+# ╠═e2564151-c5d5-41e3-b999-bcd08c27259b
+# ╠═7852c56b-a482-4c9f-af4b-6b6803d351dd
+# ╠═002da90e-c1ad-4459-b790-32a50d93235b
+# ╠═004bb380-3f02-44be-bde9-df315837457a
+# ╠═f837fe34-0257-463b-80cb-f5f022c535d5
+# ╠═0652d0eb-ca7d-4aa5-b699-2af2e5b53293
+# ╠═657b2bbd-7c75-4e49-aa9e-0d8af86b042b
+# ╠═7e71d71e-94b9-4333-86d7-280049a8f0ca
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -43,7 +43,7 @@ end
 m = linear_model(x, y_observed, σ)
 
 # ╔═╡ 30de6f61-3603-4173-929d-f4332734d246
-samples = sample(m, NUTS(), 1000)
+samples = sample(m, NUTS(), 100)
 
 # ╔═╡ f352ce9d-feb2-4fc5-a36d-441349dc0f6d
 md"Следующий график показывает, что при больших ``k`` должно быть более отрицательное ``b:``"

@@ -158,11 +158,14 @@ begin
 	for i in 2:N
 		succesive_floats[i] = nextfloat(succesive_floats[i - 1])
 	end
-	successive_logarithms = -log.(succesive_floats)
+	successive_logarithms = -log1p.(-succesive_floats)
 end
 
 # ╔═╡ 6d757979-be10-41fc-a25e-855ebd5ce2df
 histogram(successive_logarithms; bins)
+
+# ╔═╡ fc60207a-dce8-4eb0-8c33-9a0ac83708b7
+Float16(1.0) - eps(Float16) / 2
 
 # ╔═╡ 368aa6c1-a79d-48eb-8a12-50297e18b3df
 md"""
@@ -183,6 +186,12 @@ md"""
 # поэтому создадим заранее один массив и будем его перезаписывать
 # с помощью функций, оканчивающихся на восклицательный знак.
 test_array = Array{Float64}(undef, 10^6);
+
+# ╔═╡ 523b86ca-bcb3-4139-8894-59b3076ca2c5
+-log1p(eps(Float16)/2 - Float16(1.0))
+
+# ╔═╡ e031cc7c-a2f0-4304-afb1-34bceeeee0e7
+eps(Float16)
 
 # ╔═╡ 6b5ba0af-e49b-4f77-b0f7-ad5dc117d08c
 
@@ -1177,9 +1186,12 @@ version = "1.4.1+0"
 # ╟─486ef31c-fe03-4a10-8e3c-16dda9a95a0c
 # ╠═6d757979-be10-41fc-a25e-855ebd5ce2df
 # ╠═af1323bf-7c63-4c5a-8352-7e6f7df320c3
+# ╠═fc60207a-dce8-4eb0-8c33-9a0ac83708b7
 # ╟─368aa6c1-a79d-48eb-8a12-50297e18b3df
 # ╟─d8267749-efb8-42f4-95f0-bc657abcc373
 # ╠═bec89ed9-8997-4454-89e5-f68f35349564
+# ╠═523b86ca-bcb3-4139-8894-59b3076ca2c5
+# ╠═e031cc7c-a2f0-4304-afb1-34bceeeee0e7
 # ╟─6b5ba0af-e49b-4f77-b0f7-ad5dc117d08c
 # ╟─d53e6699-0c81-4850-bb71-8099e0cd5b6e
 # ╠═fb66a285-e1bb-44a1-9451-9893e5a5018e
