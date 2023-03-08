@@ -1,0 +1,1 @@
+sayBye() = "Bye!"
