@@ -65,8 +65,8 @@ md"## Интегральные операторы"
 md"## Тестовая функция"
 
 # ╔═╡ e0fdccf3-cbaa-4e7b-a53f-a0bb6aee68d5
-# test_f(x) = exp(-(x-0.25)^2 * 40) + exp(-(x+0.25)^2 * 40)
-test_f(x) = clamp(sinpi(2x), 0., Inf)
+test_f(x) = exp(-(x-0.25)^2 * 40) + exp(-(x+0.25)^2 * 40)
+# test_f(x) = clamp(sinpi(2x), 0., Inf)
 
 # ╔═╡ 912a111b-1e85-4b7b-962d-c454cf946ef5
 splined_f = approximate(test_f, basis_with_bc).spline
@@ -84,17 +84,20 @@ kernel_matrix = reduce(hcat, (galerkin_projection(y -> kernel(xᵢ, y), basis_wi
 smoothed_y = kernel_matrix * splined_f.coefs
 
 # ╔═╡ 18a28850-adcc-4841-995e-ff24656bb5c6
-σ_noise = 0.05
+σ_noise = 0.000001
 
 # ╔═╡ 5a38fe2e-3d78-45b1-85cc-742947e5dfd9
 noised_y = smoothed_y .+ σ_noise .* randn(size(xx))
+
+# ╔═╡ 7cce7298-14b2-4133-865f-b89dd96c4484
+xxx = -1:0.01:1
 
 # ╔═╡ c9f2fc6e-dbf2-4323-a54b-d88a753147b7
 begin
 	plot()
 	#scatter!(x, test_f.(x), label = false)
-	plot!(xx, test_f.(xx), label = "Исходная функция")
-	#plot!(xx, splined_f.(xx), label = "Сплайновая аппроксимация исходной функции")
+	plot!(xxx, test_f.(xxx), label = "Исходная функция")
+	plot!(xxx, splined_f.(xxx), label = "Сплайновая аппроксимация исходной функции")
 	plot!(xx, smoothed_y, label = "После свёртки с ядром")
 	scatter!(xx, noised_y, yerror = σ_noise, label = "Зашумленные измерения", markersize = 1)
 end
@@ -108,7 +111,7 @@ md"## Простая turing-модель"
 # ╔═╡ 49b88a53-1015-4fc1-b44b-977584166c06
 @model function model(
 	x, y, Ω = Ω_with_bc[2], kernel_matrix = kernel_matrix, 
-	# α_true = α_true, σ_noise_true = σ_noise
+	α_true = α_true, σ_noise_true = σ_noise
 )
 	n = size(Ω)[1]
 
@@ -149,6 +152,12 @@ begin
 	plot!(xx, regularized_result.(xx), label = "восстановленная функция")
 end
 
+# ╔═╡ 0de4e947-bad7-420d-abf0-8e0ef7588155
+plot(samples[Symbol("coefs[10]")])
+
+# ╔═╡ 8e69fbb5-140d-4e47-8cd3-21924e662eec
+m
+
 # ╔═╡ 940c06e0-6b37-4d31-bea1-f6986b989915
 md"## Ensure positive"
 
@@ -188,23 +197,8 @@ end
 # ╔═╡ e4c5bff8-239d-4ebf-b4f1-262fa92cbe08
 m2 = model2(xx, noised_y)
 
-# ╔═╡ a4fc1154-09a0-4bef-8437-f607fbf39139
-samples2 = sample(m2, NUTS(), 10000)
-
-# ╔═╡ 1d5f6ddd-416d-486b-906b-5606bbf8462a
-mean_coefs2 = mean(samples2[100:end])[coef_symbols].nt.mean;
-
-# ╔═╡ 25fd3183-8c46-4af0-b96c-030be40df4ff
-regularized_restricted_result = Spline(basis_with_bc, mean_coefs2);
-
-# ╔═╡ 50d26489-2a83-4bd6-92ce-7be01ea45b06
-begin
-	plot(xx, test_f.(xx), label = "исходная функция")
-	plot!(xx, regularized_restricted_result.(xx), label = "восстановленная функция")
-end
-
-# ╔═╡ e35ba886-b9d6-4583-8042-a0bcd77cd8f8
-
+# ╔═╡ 2c939587-7aec-4db5-831d-b18b77610cc1
+σ_noise
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1962,6 +1956,7 @@ version = "1.4.1+0"
 # ╠═e0fdccf3-cbaa-4e7b-a53f-a0bb6aee68d5
 # ╠═0ba4bdf6-6366-42e6-997c-ad0c83961871
 # ╠═18a28850-adcc-4841-995e-ff24656bb5c6
+# ╠═7cce7298-14b2-4133-865f-b89dd96c4484
 # ╠═c9f2fc6e-dbf2-4323-a54b-d88a753147b7
 # ╠═8c9d4824-cc3d-4f14-9ed6-79021785ecd0
 # ╟─9aa3910a-aa46-4392-9878-3d1241802dd4
@@ -1972,14 +1967,19 @@ version = "1.4.1+0"
 # ╠═052e9469-a518-4f0d-970a-0a1f1004b0c0
 # ╠═95ddc4f0-2bcc-4324-835d-c6d6a02e1d38
 # ╠═b377b124-449e-4e3c-953d-746264be768d
+# ╠═0de4e947-bad7-420d-abf0-8e0ef7588155
+# ╠═8e69fbb5-140d-4e47-8cd3-21924e662eec
 # ╟─940c06e0-6b37-4d31-bea1-f6986b989915
 # ╠═99141553-ec16-4a8c-a4f2-e4869752e0cd
 # ╠═c8ba2d55-e55b-4d84-b442-055a4f1072b5
 # ╠═e4c5bff8-239d-4ebf-b4f1-262fa92cbe08
 # ╠═a4fc1154-09a0-4bef-8437-f607fbf39139
 # ╠═1d5f6ddd-416d-486b-906b-5606bbf8462a
+# ╠═328799d5-94bf-4ce0-b83e-a88c0649e00a
 # ╠═25fd3183-8c46-4af0-b96c-030be40df4ff
 # ╠═50d26489-2a83-4bd6-92ce-7be01ea45b06
 # ╠═e35ba886-b9d6-4583-8042-a0bcd77cd8f8
+# ╠═94a6292f-a028-42b7-969a-726cb91f3dbe
+# ╠═2c939587-7aec-4db5-831d-b18b77610cc1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
