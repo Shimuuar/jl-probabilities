@@ -55,7 +55,7 @@ function fold_commuting_consts!(args::Array) :: Union{Number, Nothing}
 	for i ∈ 2 : length(args)
 		if isa(args[i], Expr)
 			res = fold_commuting_consts!(args[i].args)
-			if res != nothing
+			if res !== nothing
 				args[i] = res
 			end
 		end
@@ -84,7 +84,7 @@ end
 function fold_commuting_consts(expr::Expr)
 	expr = deepcopy(expr)
 	res = fold_commuting_consts!(expr.args)
-	if res != nothing
+	if res !== nothing
 		return res
 	else
 		return expr
@@ -95,7 +95,7 @@ end
 function evaluate(expr::Expr, vars)
 	expr = substitute_vars(expr, vars)
 	res = fold_commuting_consts!(expr.args)
-	if res != nothing
+	if res !== nothing
 		return res
 	else
 		return expr

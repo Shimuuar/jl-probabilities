@@ -1,0 +1,9 @@
+[deps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+MeshViz = "9ecf9c4f-6e5a-4b5e-83ae-06f2c7a661d8"
+Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
+ModernGL = "66fc600b-dfda-50eb-8b99-91cfa97b1301"
+Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
