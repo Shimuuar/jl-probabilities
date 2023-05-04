@@ -14,7 +14,8 @@ export
     InterpolatedRocheMesh,
     average_over_faces,
     integrate_data_over_mesh,
-    integrate_data_over_triangular_mesh
+    integrate_data_over_triangular_mesh,
+    apply_radial_function
 
 
 function Ω_potential(r; mass_quotient, point_on_unit_sphere::Point)
@@ -48,6 +49,8 @@ end
 
 
 # Similar to https://github.com/JuliaGeometry/Meshes.jl/blob/a0487c6824d6ee9d7389edc25ae937f1e4cf26fd/src/transforms/translate.jl
+
+# Для создания сетки один раз
 
 struct StretchToRocheLobe <: StatelessGeometricTransform
     mass_quotient
@@ -191,5 +194,20 @@ function integrate_data_over_mesh(mesh_data::MeshData, field_name, direction)
     end
     return total
 end
+
+
+function apply_radial_function(mesh_data::MeshData, f, field_name)
+    r_list = values(mesh_data, 0).r
+    f_list = f.(r_list)
+
+    return meshdata(
+        vertices(domain(mesh_data)),
+        topology(domain(mesh_data)),
+        Dict(0 => (r = r_list, field_name => f_list,))
+    ) 
+end
+
+
+
 
 end
