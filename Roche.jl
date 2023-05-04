@@ -48,48 +48,6 @@ end
 
 
 
-# Similar to https://github.com/JuliaGeometry/Meshes.jl/blob/a0487c6824d6ee9d7389edc25ae937f1e4cf26fd/src/transforms/translate.jl
-
-# Для создания сетки один раз
-
-struct StretchToRocheLobe <: StatelessGeometricTransform
-    mass_quotient
-    lagrange1_x
-    Ω0
-end
-
-function StretchToRocheLobe(mass_quotient)
-    lagrange1_x = LagrangePoint_X(mass_quotient)
-    Ω0 = Ω_critical(lagrange1_x, mass_quotient)
-    return StretchToRocheLobe(mass_quotient, lagrange1_x, Ω0)
-end
-
-Meshes.preprocess(transform::StretchToRocheLobe, object) = transform
-
-function Meshes.applypoint(::StretchToRocheLobe, points, prep::StretchToRocheLobe)
-
-    function transform_point(point::Point)
-        r = roche_r(prep.Ω0, prep.lagrange1_x, prep.mass_quotient, point)
-        Point(coordinates(point) .* r)
-    end
-
-    return map(transform_point, points), prep
-end
-
-
-
-
-function make_roche_mesh(mass_quotient, discretization_method = RegularDiscretization(10))
-    sphere = Sphere((0. ,0., 0.), 1.)
-    return discretize(sphere, discretization_method) |>
-            Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
-            simplexify |>
-            StretchToRocheLobe(mass_quotient)
-end
-
-
-
-
 # Functions related to interpolation
 
 struct InterpolatedRocheMesh
@@ -169,15 +127,22 @@ function integrate_data_over_triangular_mesh(mesh_data::MeshData, field_name, di
 
     total = 0.
     for (val, face) ∈ zip(val_list, faces(domain(mesh_data), 2))
-        @assert isa(face, Triangle) "Для нетреугольных сеток нужно использовать integrate_data_over_mesh"
-        a, b, c = vertices(face)
-        n = (b-a) × (c-a)
-        dotp = n ⋅ direction * sign(n ⋅ coordinates(a))
-        if dotp > 0
-            total += val * dotp / 2
-        end
+        total += val_times_area(face, val, direction)
     end
     return total
+end
+
+function val_times_area(face, val, direction)
+    # @assert isa(face, Triangle) "Для нетреугольных сеток нужно использовать integrate_data_over_mesh"
+    a, b, c = vertices(face)
+    n = (b-a) × (c-a)
+    # s = sign(n ⋅ coordinates(a))
+    dotp = n ⋅ direction # * s
+    if dotp > 0
+        return val * dotp / 2
+    else
+        return zero(val)
+    end
 end
 
 function integrate_data_over_mesh(mesh_data::MeshData, field_name, direction)
@@ -186,8 +151,8 @@ function integrate_data_over_mesh(mesh_data::MeshData, field_name, direction)
     total = 0.
     for (val, face) ∈ zip(val_list, faces(domain(mesh_data), 2))
         n = normal(face)
-        radius_vector = coordinates(first(vertices(face)))
-        dotp = n ⋅ direction * sign(n ⋅ radius_vector)
+        #radius_vector = coordinates(first(vertices(face)))
+        dotp = n ⋅ direction #* sign(n ⋅ radius_vector)
         if dotp > 0
             total += dotp * val * area(face)
         end
@@ -207,7 +172,52 @@ function apply_radial_function(mesh_data::MeshData, f, field_name)
     ) 
 end
 
+function apply_radial_function!(mesh_data::MeshData, f, field_name)
+    r_list = getfield(values(mesh_data, 0), :r)
+    f_list = getfield(values(mesh_data, 0), field_name)
+    @. f_list = f(r_list)
+end
 
 
+
+
+
+
+
+# Для создания сетки один раз
+
+# Similar to https://github.com/JuliaGeometry/Meshes.jl/blob/a0487c6824d6ee9d7389edc25ae937f1e4cf26fd/src/transforms/translate.jl
+
+struct StretchToRocheLobe <: StatelessGeometricTransform
+    mass_quotient
+    lagrange1_x
+    Ω0
+end
+
+function StretchToRocheLobe(mass_quotient)
+    lagrange1_x = LagrangePoint_X(mass_quotient)
+    Ω0 = Ω_critical(lagrange1_x, mass_quotient)
+    return StretchToRocheLobe(mass_quotient, lagrange1_x, Ω0)
+end
+
+Meshes.preprocess(transform::StretchToRocheLobe, object) = transform
+
+function Meshes.applypoint(::StretchToRocheLobe, points, prep::StretchToRocheLobe)
+
+    function transform_point(point::Point)
+        r = roche_r(prep.Ω0, prep.lagrange1_x, prep.mass_quotient, point)
+        Point(coordinates(point) .* r)
+    end
+
+    return map(transform_point, points), prep
+end
+
+function make_roche_mesh(mass_quotient, discretization_method = RegularDiscretization(10))
+    sphere = Sphere((0. ,0., 0.), 1.)
+    return discretize(sphere, discretization_method) |>
+            Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
+            simplexify |>
+            StretchToRocheLobe(mass_quotient)
+end
 
 end
