@@ -1,10 +1,11 @@
 module TuringTurchinRegularization
 
-export Ω, kernel_matrix, cov_matrix, restored_values, restored_spline, make_Ω2_model, apply_model
+export Ω, kernel_matrix, cov_matrix, restored_values, restored_spline, make_Ω2_model, apply_model, make_Ω2_model_cached
 
 using SparseArrays
 using LinearAlgebra
 
+using Memoize
 using Measurements
 using BSplineKit
 using Turing
@@ -71,6 +72,18 @@ function make_Ω2_model(df, model_func, kernel_func; spline_knots)
 
     K = kernel_matrix(kernel_func, df.x, b)
     Ω2 = Ω(b, 2)
+
+    return model_func(df; Ω = Ω2, kernel_matrix = K, kernel_func = kernel_func, spline_basis = b)
+end
+
+@memoize Dict function make_Ω2_model_cached(df, model_expr, kernel_func; spline_knots)
+    b = BSplineBasis(4, copy(spline_knots))
+    b = RecombinedBSplineBasis(Derivative(0), b)
+
+    K = kernel_matrix(kernel_func, df.x, b)
+    Ω2 = Ω(b, 2)
+
+    model_func = eval(:(@model $model_expr))
 
     return model_func(df; Ω = Ω2, kernel_matrix = K, kernel_func = kernel_func, spline_basis = b)
 end
