@@ -14,10 +14,7 @@ export
     make_roche_mesh,
     InterpolatedRoche,
     apply_radial_function!,
-    average_over_faces!,
-    integrate_data_over_mesh,
-    integrate_data_over_triangular_mesh,
-    integrate_data_over_triangular_mesh2
+    integrate_data_over_triangular_mesh
 
 
 function Ω_potential(r; mass_quotient, point_on_unit_sphere::Point)
@@ -78,7 +75,7 @@ function InterpolatedRoche(spherical_mesh::SimpleMesh, mass_quotient_knots, fiel
         for r_values_for_vertex ∈ eachrow(r_values)
     ]
 
-    arrays_for_face_values = NamedTuple(field_name => zeros(nfaces(spherical_mesh, 2)) for field_name ∈ field_names)
+    # arrays_for_face_values = NamedTuple(field_name => zeros(nfaces(spherical_mesh, 2)) for field_name ∈ field_names)
     arrays_for_vertex_values = NamedTuple(field_name => zeros(nvertices(spherical_mesh)) for field_name ∈ field_names)
     arrays_for_vertex_values = merge(arrays_for_vertex_values, (; r = zeros(nvertices(spherical_mesh))))
 
@@ -86,12 +83,12 @@ function InterpolatedRoche(spherical_mesh::SimpleMesh, mass_quotient_knots, fiel
         copy(vertices(spherical_mesh)),
         topology(spherical_mesh),
         Dict(0 => arrays_for_vertex_values,
-             2 => arrays_for_face_values,
+             # 2 => arrays_for_face_values,
         )
     )
 
 
-    dual_arrays_for_face_values = NamedTuple(field_name => zeros(Dual, nfaces(spherical_mesh, 2)) for field_name ∈ field_names)
+    # dual_arrays_for_face_values = NamedTuple(field_name => zeros(Dual, nfaces(spherical_mesh, 2)) for field_name ∈ field_names)
     dual_arrays_for_vertex_values = NamedTuple(field_name => zeros(Dual, nvertices(spherical_mesh)) for field_name ∈ field_names)
     dual_arrays_for_vertex_values = merge(dual_arrays_for_vertex_values, (; r = zeros(Dual, nvertices(spherical_mesh))))
 
@@ -100,7 +97,7 @@ function InterpolatedRoche(spherical_mesh::SimpleMesh, mass_quotient_knots, fiel
         Vector{Point{3, Dual}}(undef, nvertices(spherical_mesh)),
         topology(spherical_mesh),
         Dict(0 => dual_arrays_for_vertex_values,
-             2 => dual_arrays_for_face_values,
+             # 2 => dual_arrays_for_face_values,
         )
     )
 
@@ -136,55 +133,11 @@ function apply_radial_function!(mesh_data::MeshData, f, field_name)
     return mesh_data
 end
 
-function average_over_faces!(mesh_data::MeshData, field_name)
-    values_for_vertices = getfield(values(mesh_data, 0), field_name)
-    values_for_faces = getfield(values(mesh_data, 2), field_name)
-
-    values_for_faces .= map(faces(topology(domain(mesh_data)), 2)) do face
-        index = indices(face)
-        sum(values_for_vertices[i] for i ∈ index) / length(index)
-    end
-
-    # for (i, face) in enumerate(faces(topology(domain(mesh_data)), 2))
-    #     values_for_faces[i] = sum(values_for_vertices[j] for j ∈ index) / length(index) # one(eltype(values_for_faces))
-    # end
-
-    # values_for_faces .= (
-    #     avg_over_face(mesh_data, field_name, connec) 
-    #     for connec in faces(topology(domain(mesh_data)), 2)
-    # )
-
-    return mesh_data
-end
-
 
 # Functions related to integration
 
+
 function integrate_data_over_triangular_mesh(mesh_data::MeshData, field_name, direction)
-
-    val_list = getfield(values(mesh_data, 2), field_name)
-    faces_list = faces(domain(mesh_data), 2)
-
-    return sum(val_times_area(face, val, direction) 
-        for (val, face) ∈ zip(val_list, faces_list)
-    )
-end
-
-function val_times_area(face, val, direction)
-    # @assert isa(face, Triangle) "Для нетреугольных сеток нужно использовать integrate_data_over_mesh"
-    a, b, c = vertices(face)
-    n = (b-a) × (c-a)
-    # s = sign(n ⋅ coordinates(a))
-    dotp = n ⋅ direction # * s
-    if dotp > 0
-        return val * dotp / 2
-    else
-        return zero(val)
-    end
-end
-
-
-function integrate_data_over_triangular_mesh2(mesh_data::MeshData, field_name, direction)
     vertices_values = getfield(values(mesh_data, 0), field_name)
 
     sum(faces(topology(domain(mesh_data)), 2)) do connection
@@ -209,22 +162,6 @@ function avg_over_face(vertices_values, connection)
     index = indices(connection)
     return sum(vertices_values[i] for i ∈ index) / length(index)
 end
-
-
-# function integrate_data_over_mesh(mesh_data::MeshData, field_name, direction)
-#     val_list = getfield(values(mesh_data, 2), field_name)
-
-#     total = 0.
-#     for (val, face) ∈ zip(val_list, faces(domain(mesh_data), 2))
-#         n = normal(face)
-#         radius_vector = coordinates(first(vertices(face)))
-#         dotp = n ⋅ direction * sign(n ⋅ radius_vector)
-#         if dotp > 0
-#             total += dotp * val * area(face)
-#         end
-#     end
-#     return total
-# end
 
 
 

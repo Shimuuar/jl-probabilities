@@ -12,17 +12,14 @@ export
     StretchToRocheLobe,
     make_roche_mesh,
     InterpolatedRocheMesh,
-    average_over_faces,
     integrate_data_over_mesh,
     integrate_data_over_triangular_mesh,
-    integrate_data_over_triangular_mesh2,
-    apply_radial_function,
-    avg_over_face
+    apply_radial_function
 
 
 function Ω_potential(r; mass_quotient, point_on_unit_sphere::Point)
     λ, μ, ν = coordinates(point_on_unit_sphere)
-    return 1/r + 
+    return 1/r +
         mass_quotient * (1 / √(1 + r^2 - 2r*λ) - λ*r) +
         (1. + mass_quotient) / 2 * r^2 * (1. - ν^2)
 end
@@ -122,33 +119,7 @@ function average_over_faces(mesh_data::MeshData, field_name)
 end
 
 
-
 function integrate_data_over_triangular_mesh(mesh_data::MeshData, field_name, direction)
-
-    val_list = getfield(values(mesh_data, 2), field_name)
-    faces_list = faces(domain(mesh_data), 2)
-
-    return sum(val_times_area(face, val, direction)
-        for (val, face) ∈ zip(val_list, faces_list)
-    )
-end
-
-function val_times_area(face, val, direction)
-    # @assert isa(face, Triangle) "Для нетреугольных сеток нужно использовать integrate_data_over_mesh"
-    a, b, c = vertices(face)
-    n = (b-a) × (c-a)
-    # s = sign(n ⋅ coordinates(a))
-    dotp = n ⋅ direction # * s
-    if dotp > 0
-        return val * dotp / 2
-    else
-        return zero(val)
-    end
-end
-
-
-
-function integrate_data_over_triangular_mesh2(mesh_data::MeshData, field_name, direction)
     vertices_values = getfield(values(mesh_data, 0), field_name)
 
     sum(faces(topology(domain(mesh_data)), 2)) do connection
@@ -200,12 +171,6 @@ function apply_radial_function(mesh_data::MeshData, f, field_name)
         topology(domain(mesh_data)),
         Dict(0 => (r = r_list, field_name => f_list,))
     ) 
-end
-
-function apply_radial_function!(mesh_data::MeshData, f, field_name)
-    r_list = getfield(values(mesh_data, 0), :r)
-    f_list = getfield(values(mesh_data, 0), field_name)
-    @. f_list = f(r_list)
 end
 
 

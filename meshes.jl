@@ -36,27 +36,18 @@ begin
 	theme(:juno)
 end
 
-# ╔═╡ 00743f23-7981-4eae-8eee-36b22c071c94
+# ╔═╡ 8d094341-4e9f-4a07-8b6e-2c800d5693e8
 using BenchmarkTools
 
-# ╔═╡ 9ed2c625-b4ff-4284-80d0-ff921e04dc94
-md"## Make a mesh"
-
-# ╔═╡ efb900d4-51ff-46a9-9bff-d27446a13151
-roche_mesh = make_roche_mesh(0.1, RegularDiscretization(100))
-
-# ╔═╡ bea34169-42b6-48ce-8eaf-03e51359e833
-viz(roche_mesh, showfacets = true)
-
 # ╔═╡ 4b44dd7b-e28d-4a4a-ba6b-91b905b804fd
-md"### Interpolate over mass quotient"
+md"### Mesh interpolated over mass quotient"
 
 # ╔═╡ 13067a2e-7cff-4913-834c-04379137f4c1
 begin
 	mass_quotients = 0.1:0.3:10
 
 	spherical_mesh = 
-		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(100)) |>
+		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(16)) |>
 		Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
 		simplexify
 
@@ -65,9 +56,6 @@ end
 
 # ╔═╡ 35100ca4-563b-4adb-a83f-2d3bedc6043e
 viz(domain(interpolated_mesh(0.11)), showfacets = true)
-
-# ╔═╡ 262e924b-3b90-4956-b31d-13845a6a8ded
-viz(domain(interpolated_mesh(9.99)), showfacets = true)
 
 # ╔═╡ ad143ff7-cd87-4dd0-96c4-7d722fa30d42
 md"### Integration"
@@ -81,6 +69,13 @@ f(r) = 1. # r / r
 # ╔═╡ 16eb894a-4b7f-4497-a8c1-181de41bd4e3
 m2 = apply_radial_function(m, f, :f)
 
+# ╔═╡ d95d6b96-308d-46a6-86d8-b3f84c2823a1
+# @btime for q ∈ 0.1:0.3:10
+# 	m = interpolated_mesh(q)
+# 	m2 = apply_radial_function(m, f, :f)
+# 	integrate_data_over_triangular_mesh(m2, :f, (0., 0., 1.))
+# end
+
 # ╔═╡ b058e518-913e-4dcd-8a4d-2eb64314731b
 md"### Turing"
 
@@ -89,7 +84,7 @@ md"### Turing"
 
 # ╔═╡ c7b4efd6-e18d-4384-87b6-6ba472479b37
 integrals = [
-	integrate_data_over_triangular_mesh2(m2, :f, (cos(ϕ), sin(ϕ), 0.))
+	integrate_data_over_triangular_mesh(m2, :f, (cos(ϕ), sin(ϕ), 0.))
 	for ϕ in ϕs
 ]
 
@@ -102,41 +97,18 @@ plot(ϕs, integrals)
 	ϕ ~ Uniform(0., π)
 	m = interp_mesh(q)
 	m = apply_radial_function(m, f, :f)
-	m = average_over_faces(m, :f)
 	i = integrate_data_over_triangular_mesh(m, :f, (cos(ϕ), sin(ϕ), 0.))
 	integral_value ~ Normal(i, 1e-3)
 end
 
+# ╔═╡ d7413972-1b56-41d0-8d99-145d87a1cb9c
+
+
 # ╔═╡ 06faf639-6d6f-4f0a-8ef6-3f90af68d593
-# @btime sample(model(interpolated_mesh, 0.61), NUTS(), 1000)
+samples = sample(model(interpolated_mesh, 0.61), NUTS(), 1000)
 
-# ╔═╡ b034476a-fc9c-4c3e-8f81-25d22a1ec796
-@model function model2(interp_mesh, integral_value)
-	q ~ Uniform(0.1, 1.)
-	ϕ ~ Uniform(0., π)
-	m = interp_mesh(q)
-	m = apply_radial_function(m, f, :f)
-	i = integrate_data_over_triangular_mesh2(m, :f, (cos(ϕ), sin(ϕ), 0.))
-	integral_value ~ Normal(i, 1e-3)
-end
-
-# ╔═╡ 4754b10c-0b5f-4b4f-acc2-fe34ea85870d
-# @btime sample(model2(interpolated_mesh, 0.61), NUTS(), 1000)
-
-# ╔═╡ 3c2c36d0-c6e5-410d-aae9-1345691fda9d
-@btime for q ∈ 0.1:0.3:10
-	m = interpolated_mesh(q)
-	m2 = apply_radial_function(m, f, :f)
-	m3 = average_over_faces(m2, :f)
-	integrate_data_over_triangular_mesh(m3, :f, (0., 0., 1.))
-end
-
-# ╔═╡ a5e7feca-07eb-489f-8ec2-22e1d2437378
-@btime for q ∈ 0.1:0.3:10
-	m = interpolated_mesh(q)
-	m2 = apply_radial_function(m, f, :f)
-	integrate_data_over_triangular_mesh2(m2, :f, (0., 0., 1.))
-end
+# ╔═╡ 10707b04-bad9-42e8-ada1-5d8ce1ea7856
+plot(samples, bottom_margin = 50Plots.px)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2391,27 +2363,22 @@ version = "1.4.1+0"
 # ╠═9658e23d-2780-408d-b859-6d93183ea661
 # ╠═217cf5a0-c67e-465e-9b0a-76551980033b
 # ╠═0d70b957-d88d-488c-ba59-3c965471c0e1
-# ╟─9ed2c625-b4ff-4284-80d0-ff921e04dc94
-# ╠═efb900d4-51ff-46a9-9bff-d27446a13151
-# ╠═bea34169-42b6-48ce-8eaf-03e51359e833
 # ╟─4b44dd7b-e28d-4a4a-ba6b-91b905b804fd
 # ╠═13067a2e-7cff-4913-834c-04379137f4c1
 # ╠═35100ca4-563b-4adb-a83f-2d3bedc6043e
-# ╠═262e924b-3b90-4956-b31d-13845a6a8ded
 # ╟─ad143ff7-cd87-4dd0-96c4-7d722fa30d42
 # ╠═f3ccd69e-59e4-46f8-9846-a0dd3886aded
 # ╠═f353541c-18bc-4237-9e63-ff0e32f68df4
 # ╠═16eb894a-4b7f-4497-a8c1-181de41bd4e3
+# ╠═8d094341-4e9f-4a07-8b6e-2c800d5693e8
+# ╠═d95d6b96-308d-46a6-86d8-b3f84c2823a1
 # ╟─b058e518-913e-4dcd-8a4d-2eb64314731b
 # ╠═8b4a9323-8470-4726-bb97-a3961ccae1ff
 # ╠═c7b4efd6-e18d-4384-87b6-6ba472479b37
 # ╠═19f29d65-3c07-4575-b910-2d7945b76a3c
 # ╠═1fe85209-e1ca-4f20-8f08-ab51e2f4be99
-# ╠═00743f23-7981-4eae-8eee-36b22c071c94
+# ╠═d7413972-1b56-41d0-8d99-145d87a1cb9c
 # ╠═06faf639-6d6f-4f0a-8ef6-3f90af68d593
-# ╠═b034476a-fc9c-4c3e-8f81-25d22a1ec796
-# ╠═4754b10c-0b5f-4b4f-acc2-fe34ea85870d
-# ╠═3c2c36d0-c6e5-410d-aae9-1345691fda9d
-# ╠═a5e7feca-07eb-489f-8ec2-22e1d2437378
+# ╠═10707b04-bad9-42e8-ada1-5d8ce1ea7856
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

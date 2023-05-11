@@ -36,47 +36,29 @@ begin
 	theme(:juno)
 end
 
-# ╔═╡ 00743f23-7981-4eae-8eee-36b22c071c94
+# ╔═╡ 0860ffc2-e411-48f1-a6cd-f8148b5a1496
 using BenchmarkTools
-
-# ╔═╡ 52ad929c-15dc-44ac-bcb0-65ad3a871b8c
-using StaticArrays
 
 # ╔═╡ 4f39e997-ca4b-4bbe-ae1e-a025fcada7c9
 import ForwardDiff
 
-# ╔═╡ 9ed2c625-b4ff-4284-80d0-ff921e04dc94
-md"## Make a mesh"
-
-# ╔═╡ efb900d4-51ff-46a9-9bff-d27446a13151
-# roche_mesh = make_roche_mesh(0.1, RegularDiscretization(100))
-
-# ╔═╡ bea34169-42b6-48ce-8eaf-03e51359e833
-# viz(roche_mesh, showfacets = true)
-
 # ╔═╡ 4b44dd7b-e28d-4a4a-ba6b-91b905b804fd
-md"### Interpolate over mass quotient"
+md"### Mesh interpolated over mass quotient"
 
 # ╔═╡ 13067a2e-7cff-4913-834c-04379137f4c1
 begin
 	mass_quotients = 0.1:0.3:10
 
 	spherical_mesh = 
-		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(100)) |>
+		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(16)) |>
 		Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
 		simplexify
 
 	interpolated_roche = InterpolatedRoche(spherical_mesh, mass_quotients, (:f,))
 end;
 
-# ╔═╡ 5f49e946-69c7-4060-a87b-a61382975e91
-domain(interpolated_roche(0.11))
-
 # ╔═╡ 35100ca4-563b-4adb-a83f-2d3bedc6043e
 # viz(domain(interpolated_roche(0.11)), showfacets = true)
-
-# ╔═╡ 262e924b-3b90-4956-b31d-13845a6a8ded
-# viz(domain(interpolated_roche(9.99)), showfacets = true)
 
 # ╔═╡ ad143ff7-cd87-4dd0-96c4-7d722fa30d42
 md"### Integration"
@@ -87,11 +69,15 @@ m = interpolated_roche(0.5);
 # ╔═╡ f353541c-18bc-4237-9e63-ff0e32f68df4
 f(r) = r / r
 
-# ╔═╡ 16eb894a-4b7f-4497-a8c1-181de41bd4e3
-apply_radial_function!(m, r -> 4., :f);
+# ╔═╡ bfa41013-5140-4688-a738-eeb880b853ea
+apply_radial_function!(m, f, :f);
 
-# ╔═╡ 689bf742-4c71-43c2-b945-bbf8899d592f
-average_over_faces!(m, :f);
+# ╔═╡ 7f87a3ee-bebb-4c34-875d-bbb6621ad62b
+@btime for q ∈ 0.1:0.3:10
+	m = interpolated_roche(q)
+	apply_radial_function!(m, f, :f)
+	integrate_data_over_triangular_mesh(m, :f, (0., 0., 1.))
+end
 
 # ╔═╡ b058e518-913e-4dcd-8a4d-2eb64314731b
 md"### Turing"
@@ -114,73 +100,15 @@ plot(ϕs, integrals)
 	ϕ ~ Uniform(0., π)
 	m = interpolated_roche(q)
 	apply_radial_function!(m, f, :f)
-	average_over_faces!(m, :f)
 	i = integrate_data_over_triangular_mesh(m, :f, (cos(ϕ), sin(ϕ), 0.))
 	integral_value ~ Normal(i, 1e-3)
 end
 
 # ╔═╡ 06faf639-6d6f-4f0a-8ef6-3f90af68d593
-# samples = sample(model(interpolated_roche, 0.61), NUTS(), 1000)
+samples = sample(model(interpolated_roche, 0.61), NUTS(), 1000)
 
-# ╔═╡ a97adbeb-a3d9-42ff-bbc6-f4fe70752a01
-@model function model2(interpolated_roche, integral_value)
-	q ~ Uniform(0.1, 1.)
-	ϕ ~ Uniform(0., π)
-	m = interpolated_roche(q)
-	apply_radial_function!(m, f, :f)
-	i = integrate_data_over_triangular_mesh2(m, :f, (cos(ϕ), sin(ϕ), 0.))
-	integral_value ~ Normal(i, 1e-3)
-end
-
-# ╔═╡ b98c1ae1-9126-4f0e-9761-0917de825246
-@btime for q ∈ 0.1:0.3:10
-	m = interpolated_roche(q)
-	apply_radial_function!(m, f, :f)
-	average_over_faces!(m, :f)
-	integrate_data_over_triangular_mesh(m, :f, (0., 0., 1.))
-end
-
-# ╔═╡ f7bb2323-180c-4dd2-906c-71df120f1d7b
-@btime for q ∈ 0.1:0.3:10
-	m = interpolated_roche(q)
-	apply_radial_function!(m, f, :f)
-	integrate_data_over_triangular_mesh2(m, :f, (0., 0., 1.))
-end
-
-# ╔═╡ 259b7013-ba9c-47cd-b0bb-98d1c52bd86d
-md"#### Try to sum 3 elements without allocations"
-
-# ╔═╡ 6d23d8ec-f7b0-439a-abc9-3a0c89361c9e
-face = first(faces(topology(domain(m)), 2))
-
-# ╔═╡ 452839ae-0f0d-4101-a630-bdd92355f127
-array = [10, 20, 30, 40]
-
-# ╔═╡ 2745fe42-d78e-48c1-b317-843460d17fb0
-indices = (1, 4)
-
-# ╔═╡ 924f04ed-7cdf-49a5-ace0-8b52f3a9ce3f
-@btime sum(array[i] for i in indices)
-
-# ╔═╡ 2b1d5ffe-47aa-44c6-9a42-fdc3a78215e2
-@btime begin
-	total = 0
-	for i in indices
-		total += array[i]
-	end
-end
-
-# ╔═╡ c734bf99-3978-455e-be87-23420f06df12
-@btime foldl((s, i) -> s + array[i], indices, init = 0)
-
-# ╔═╡ ed26269e-0dd5-4496-b058-327b6707c5ab
-@btime sum(array)
-
-# ╔═╡ b19d9e1a-8668-4954-86fd-d4923289f307
-
-
-# ╔═╡ 6ae9565e-f634-487b-831d-950a0e4648b6
-@btime sum(array[SVector(indices)])
+# ╔═╡ 74c1dadd-e167-452a-a39b-46c44116a3e7
+plot(samples)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -194,7 +122,6 @@ PlotlyJS = "f0f68f2c-4968-5e81-91da-67840de0976a"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
@@ -209,7 +136,6 @@ PlotlyJS = "~0.18.10"
 Plots = "~1.38.11"
 Revise = "~3.5.2"
 Roots = "~2.0.11"
-StaticArrays = "~1.5.24"
 StatsPlots = "~0.15.5"
 Turing = "~0.25.0"
 WGLMakie = "~0.8.8"
@@ -221,7 +147,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "e8b680a3910990f83d2cdc55da8739bedfcee4d8"
+project_hash = "4dac1651db692fb335f16773d94b6dfe0e41a1d9"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -2440,39 +2366,21 @@ version = "1.4.1+0"
 # ╠═4f39e997-ca4b-4bbe-ae1e-a025fcada7c9
 # ╠═217cf5a0-c67e-465e-9b0a-76551980033b
 # ╠═0d70b957-d88d-488c-ba59-3c965471c0e1
-# ╟─9ed2c625-b4ff-4284-80d0-ff921e04dc94
-# ╠═efb900d4-51ff-46a9-9bff-d27446a13151
-# ╠═bea34169-42b6-48ce-8eaf-03e51359e833
 # ╟─4b44dd7b-e28d-4a4a-ba6b-91b905b804fd
 # ╠═13067a2e-7cff-4913-834c-04379137f4c1
-# ╠═5f49e946-69c7-4060-a87b-a61382975e91
 # ╠═35100ca4-563b-4adb-a83f-2d3bedc6043e
-# ╠═262e924b-3b90-4956-b31d-13845a6a8ded
 # ╟─ad143ff7-cd87-4dd0-96c4-7d722fa30d42
 # ╠═f3ccd69e-59e4-46f8-9846-a0dd3886aded
 # ╠═f353541c-18bc-4237-9e63-ff0e32f68df4
-# ╠═16eb894a-4b7f-4497-a8c1-181de41bd4e3
-# ╠═689bf742-4c71-43c2-b945-bbf8899d592f
+# ╠═bfa41013-5140-4688-a738-eeb880b853ea
+# ╠═0860ffc2-e411-48f1-a6cd-f8148b5a1496
+# ╠═7f87a3ee-bebb-4c34-875d-bbb6621ad62b
 # ╟─b058e518-913e-4dcd-8a4d-2eb64314731b
 # ╠═8b4a9323-8470-4726-bb97-a3961ccae1ff
 # ╠═c7b4efd6-e18d-4384-87b6-6ba472479b37
 # ╠═19f29d65-3c07-4575-b910-2d7945b76a3c
 # ╠═1fe85209-e1ca-4f20-8f08-ab51e2f4be99
-# ╠═00743f23-7981-4eae-8eee-36b22c071c94
 # ╠═06faf639-6d6f-4f0a-8ef6-3f90af68d593
-# ╠═a97adbeb-a3d9-42ff-bbc6-f4fe70752a01
-# ╠═b98c1ae1-9126-4f0e-9761-0917de825246
-# ╠═f7bb2323-180c-4dd2-906c-71df120f1d7b
-# ╟─259b7013-ba9c-47cd-b0bb-98d1c52bd86d
-# ╠═6d23d8ec-f7b0-439a-abc9-3a0c89361c9e
-# ╠═452839ae-0f0d-4101-a630-bdd92355f127
-# ╠═2745fe42-d78e-48c1-b317-843460d17fb0
-# ╠═924f04ed-7cdf-49a5-ace0-8b52f3a9ce3f
-# ╠═2b1d5ffe-47aa-44c6-9a42-fdc3a78215e2
-# ╠═c734bf99-3978-455e-be87-23420f06df12
-# ╠═ed26269e-0dd5-4496-b058-327b6707c5ab
-# ╟─b19d9e1a-8668-4954-86fd-d4923289f307
-# ╠═52ad929c-15dc-44ac-bcb0-65ad3a871b8c
-# ╠═6ae9565e-f634-487b-831d-950a0e4648b6
+# ╠═74c1dadd-e167-452a-a39b-46c44116a3e7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
