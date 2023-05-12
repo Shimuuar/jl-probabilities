@@ -47,7 +47,7 @@ begin
 	mass_quotients = 0.1:0.3:10
 
 	spherical_mesh = 
-		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(16)) |>
+		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(64)) |>
 		Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
 		simplexify
 

@@ -1,7 +1,7 @@
 begin
-	using Revise
-	includet("./Roche.jl")
-	using ..Roche
+    using Revise
+    includet("./Roche.jl")
+    using ..Roche
 end
 
 using Meshes
@@ -14,14 +14,14 @@ using BenchmarkTools
 
 
 begin
-	mass_quotients = 0.1:0.3:10
+    mass_quotients = 0.1:0.3:10
 
-	spherical_mesh = 
-		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(16)) |>
-		Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
-		simplexify
+    spherical_mesh =
+        discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(16)) |>
+        Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
+        simplexify
 
-	interpolated_mesh = InterpolatedRocheMesh(spherical_mesh, mass_quotients)
+    interpolated_mesh = InterpolatedRocheMesh(spherical_mesh, mass_quotients)
 end
 
 
@@ -33,35 +33,28 @@ f(r) = 1.
 m2 = apply_radial_function(m, f, :f)
 
 
-m3 = average_over_faces(m2, :f)
-
 
 @code_warntype integrate_data_over_triangular_mesh(m2, :f, Vec(0., 1., 0.))
 
 
-@code_warntype avg_over_face(m2, :f, first(faces(topology(domain(m2)), 2)))
-
-
 @profview for _ in 1:5000
-	# avg_over_face(m2, :f, first(faces(topology(domain(m2)), 2)))
-	# integrate_data_over_triangular_mesh(m3, :f, Vec(0., 1., 0.))
-	integrate_data_over_triangular_mesh2(m2, :f, Vec(0., 1., 0.))
+    integrate_data_over_triangular_mesh(m2, :f, Vec(0., 1., 0.))
 end
 
 
 
 
 @model function model(interp_mesh, integral_value)
-	q ~ Uniform(0.1, 1.)
-	ϕ ~ Uniform(0., π)
-	m = interp_mesh(q)
-	m = apply_radial_function(m, f, :f)
-	i = integrate_data_over_triangular_mesh(m, :f, (cos(ϕ), sin(ϕ), 0.))
-	integral_value ~ Normal(i, 1e-3)
+    q ~ Uniform(0.1, 1.)
+    ϕ ~ Uniform(0., π)
+    m = interp_mesh(q)
+    m = apply_radial_function(m, f, :f)
+    i = integrate_data_over_triangular_mesh(m, :f, (cos(ϕ), sin(ϕ), 0.))
+    integral_value ~ Normal(i, 1e-3)
 end
 
 
-@profview samples = sample(model(interpolated_mesh, 0.61), NUTS(), 1000)
+@profview sample(model(interpolated_mesh, 0.61), NUTS(), 1000)
 
 @btime sample(model(interpolated_mesh, 0.61), NUTS(), 1000)
 
