@@ -41,7 +41,11 @@ function roche_r(Ω0, lagrange1_x, mass_quotient, point_on_unit_sphere::Point)
     function Ω_partially_applied(r)
         return Ω_potential(r; mass_quotient, point_on_unit_sphere) - Ω0
     end
-    find_zero(Ω_partially_applied, (0., lagrange1_x))
+    if point_on_unit_sphere.coords[1] ≈ one(eltype(point_on_unit_sphere.coords))
+        return lagrange1_x
+    else
+        return find_zero(Ω_partially_applied, (0., lagrange1_x))
+    end
 end
 
 
