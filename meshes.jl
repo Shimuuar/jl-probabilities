@@ -36,9 +36,6 @@ begin
 	theme(:juno)
 end
 
-# ╔═╡ 8d094341-4e9f-4a07-8b6e-2c800d5693e8
-using BenchmarkTools
-
 # ╔═╡ 4b44dd7b-e28d-4a4a-ba6b-91b905b804fd
 md"### Mesh interpolated over mass quotient"
 
@@ -64,17 +61,10 @@ md"### Integration"
 m = interpolated_mesh(0.5)
 
 # ╔═╡ f353541c-18bc-4237-9e63-ff0e32f68df4
-f(r) = 1. # r / r
+f(r) = 1.
 
 # ╔═╡ 16eb894a-4b7f-4497-a8c1-181de41bd4e3
 m2 = apply_radial_function(m, f, :f)
-
-# ╔═╡ d95d6b96-308d-46a6-86d8-b3f84c2823a1
-# @btime for q ∈ 0.1:0.3:10
-# 	m = interpolated_mesh(q)
-# 	m2 = apply_radial_function(m, f, :f)
-# 	integrate_data_over_triangular_mesh(m2, :f, (0., 0., 1.))
-# end
 
 # ╔═╡ b058e518-913e-4dcd-8a4d-2eb64314731b
 md"### Turing"
@@ -114,7 +104,6 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 MeshViz = "9ecf9c4f-6e5a-4b5e-83ae-06f2c7a661d8"
 Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
@@ -127,7 +116,6 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [compat]
-BenchmarkTools = "~1.3.2"
 Interpolations = "~0.14.7"
 MeshViz = "~0.8.8"
 Meshes = "~0.32.3"
@@ -146,7 +134,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "3de14aa8ed3834b72641bcf60ccb5e421bdf0c75"
+project_hash = "6e1dd3f068281314fecc7b853cd807377ee55579"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f5c25e8a5b29b5e941b7408bc8cc79fea4d9ef9a"
@@ -345,12 +333,6 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 git-tree-sha1 = "aebf55e6d7795e02ca500a689d326ac979aaf89e"
 uuid = "9718e550-a3fa-408a-8086-8db961cd8217"
 version = "0.1.1"
-
-[[deps.BenchmarkTools]]
-deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
-git-tree-sha1 = "d9a9701b899b30332bbcb3e1679c41cce81fb0e8"
-uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-version = "1.3.2"
 
 [[deps.Bessels]]
 git-tree-sha1 = "4435559dc39793d53a9e3d278e185e920b4619ef"
@@ -1911,10 +1893,6 @@ version = "0.5.4"
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
-[[deps.Profile]]
-deps = ["Printf"]
-uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
-
 [[deps.ProgressLogging]]
 deps = ["Logging", "SHA", "UUIDs"]
 git-tree-sha1 = "80d919dee55b9c50e8d9e2da5eeafff3fe58b539"
@@ -2843,8 +2821,6 @@ version = "1.4.1+0"
 # ╠═f3ccd69e-59e4-46f8-9846-a0dd3886aded
 # ╠═f353541c-18bc-4237-9e63-ff0e32f68df4
 # ╠═16eb894a-4b7f-4497-a8c1-181de41bd4e3
-# ╠═8d094341-4e9f-4a07-8b6e-2c800d5693e8
-# ╠═d95d6b96-308d-46a6-86d8-b3f84c2823a1
 # ╟─b058e518-913e-4dcd-8a4d-2eb64314731b
 # ╠═8b4a9323-8470-4726-bb97-a3961ccae1ff
 # ╠═c7b4efd6-e18d-4384-87b6-6ba472479b37
