@@ -3,6 +3,7 @@ module Roche
 using Meshes
 using Roots
 using Interpolations
+using LinearAlgebra
 
 export 
     Ω_potential,
@@ -11,6 +12,7 @@ export
     roche_r,
     StretchToRocheLobe,
     make_roche_mesh,
+    make_roche_meshdata,
     InterpolatedRocheMesh,
     integrate_data_over_mesh,
     integrate_data_over_triangular_mesh,
@@ -64,7 +66,7 @@ function InterpolatedRocheMesh(spherical_mesh::SimpleMesh, mass_quotient_knots)
 
     r_values = zeros(nvertices(spherical_mesh), length(mass_quotient_knots))
 
-    for (mass_quotient, r_values_for_quotient) ∈ 
+    for (mass_quotient, r_values_for_quotient) ∈
             zip(mass_quotient_knots, eachcol(r_values))
 
         lagrange1_x = LagrangePoint_X(mass_quotient)
@@ -97,7 +99,7 @@ function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
     return meshdata(
         new_points,
         topology(interpolated_mesh.spherical_mesh),
-        Dict(0 => (r = r_list,))
+        Dict(:vertices => (r = r_list,))
     )
 end
 
@@ -105,26 +107,9 @@ end
 
 # Functions related to integration
 
-function average_over_faces(mesh_data::MeshData, field_name)
-    values_for_vertices = getfield(values(mesh_data, 0), field_name)
-
-    values_for_faces = map(faces(topology(domain(mesh_data)), 2)) do face
-        index = indices(face)
-        sum(values_for_vertices[i] for i ∈ index) / length(index)
-    end
-
-    return meshdata(
-        vertices(domain(mesh_data)),
-        topology(domain(mesh_data)),
-        Dict(0 => values(mesh_data, 0),
-             2 => (; field_name => values_for_faces,),
-        )
-    )
-end
-
 
 function integrate_data_over_triangular_mesh(mesh_data::MeshData, field_name, direction)
-    vertices_values = getfield(values(mesh_data, 0), field_name)
+    vertices_values = getfield(values(mesh_data, :vertices), field_name)
 
     sum(faces(topology(domain(mesh_data)), 2)) do connection
         face = materialize(connection, vertices(domain(mesh_data)))
@@ -150,30 +135,14 @@ function avg_over_face(vertices_values, connection)
 end
 
 
-# function integrate_data_over_mesh(mesh_data::MeshData, field_name, direction)
-#     val_list = getfield(values(mesh_data, 2), field_name)
-
-#     total = 0.
-#     for (val, face) ∈ zip(val_list, faces(domain(mesh_data), 2))
-#         n = normal(face)
-#         radius_vector = coordinates(first(vertices(face)))
-#         dotp = n ⋅ direction * sign(n ⋅ radius_vector)
-#         if dotp > 0
-#             total += dotp * val * area(face)
-#         end
-#     end
-#     return total
-# end
-
-
 function apply_radial_function(mesh_data::MeshData, f, field_name)
-    r_list = values(mesh_data, 0).r
+    r_list = values(mesh_data, :vertices).r
     f_list = f.(r_list)
 
     return meshdata(
         vertices(domain(mesh_data)),
         topology(domain(mesh_data)),
-        Dict(0 => (r = r_list, field_name => f_list,))
+        Dict(:vertices => (r = r_list, field_name => f_list,))
     ) 
 end
 
@@ -217,6 +186,16 @@ function make_roche_mesh(mass_quotient, discretization_method = RegularDiscretiz
             Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
             simplexify |>
             StretchToRocheLobe(mass_quotient)
+end
+
+function make_roche_meshdata(mass_quotient, discretization_method = RegularDiscretization(10))
+    mesh = make_roche_mesh(mass_quotient, discretization_method)
+    r_list = norm.(coordinates.(vertices(mesh)))
+    return meshdata(
+        vertices(mesh),
+        topology(mesh),
+        Dict(:vertices => (r = r_list,))
+    )
 end
 
 end
