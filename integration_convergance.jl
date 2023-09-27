@@ -58,46 +58,57 @@ direction = (0., 0., 1.)
 function make_mesh_and_integrate(n_points, mass_quotient, f, direction)
 	m = make_roche_meshdata(mass_quotient, RegularDiscretization(n_points))
 	m = apply_radial_function(m, f, :f)
-	return integrate_data_over_triangular_mesh(m, :f, direction)
+	return @timed integrate_data_over_triangular_mesh(m, :f, direction)
 end
 
 # ╔═╡ 7b52f359-ca6d-40e6-8605-dd91bff51d93
-numbers_of_points = [16, 32, 64, 128, 192]
+numbers_of_points = [16, 32, 64, 128, 256, 512]
 
 # ╔═╡ 8d61398c-5356-46ba-814e-5b4c8fef9a7c
-function calc_normalized_integrals(numbers_of_points, mass_quotient, f, direction)
-	integrals = [
+function calc_relative_errors(numbers_of_points, mass_quotient, f, direction)
+	results = [
 		make_mesh_and_integrate(n_points, mass_quotient, f, direction)
 		for n_points ∈ numbers_of_points
 	]
-	return integrals ./ integrals[end]
+	integrals = [result.value for result in results]
+	times = [result.time for result in results]
+	integrals ./= integrals[end]
+	integrals .-= 1.
+	return integrals, times
 end
 
-# ╔═╡ 7e812d06-3cf1-42e6-9eed-d53ccbcd49fc
-md"### Интегралы с разным размером сетки при разном соотношении масс"
+# ╔═╡ cbbb86db-4980-458f-9102-ce04cd2ee815
+errors, times = calc_relative_errors(numbers_of_points, 0.5, f, direction)
 
-# ╔═╡ e226a2c0-07cd-46bd-9845-7ae5bf28ceb1
-mass_quotients = [0.01, 1.]
+# ╔═╡ e05ffa32-e613-450e-a14a-81602f93c0ee
+plot(numbers_of_points, log10.(-errors))
 
-# ╔═╡ 8391313d-ac93-478e-8358-4a631aed2710
-normalized_integrals_for_different_q = [
-	calc_normalized_integrals(numbers_of_points, mass_quotient, f, direction)
-	for mass_quotient ∈ mass_quotients
-]
+# ╔═╡ 85ce3aa6-ffa4-4a55-9a11-cdd3865cfac9
+plot(numbers_of_points, times, legend = false)
 
-# ╔═╡ 6e266a40-efe8-4453-a2e3-74616bd2fb74
-plot(numbers_of_points, normalized_integrals_for_different_q,
-	legend_title = "mass quotient", labels = mass_quotients',
-	xlabel = "Число точек по каждому из двух измерений",
-	ylabel = "Нормализованное значение интеграла",
-	legend = :bottomright
-)
+# ╔═╡ 09f516be-533d-4235-a699-b0a3167ee5a7
+plot(times, log10.(-errors))
 
-# ╔═╡ 2c1a66b6-307b-42aa-9ff4-8fda8cf11ed7
-md"Соотношение масс слабо влияет на форму полости и скорость сходимости."
+# ╔═╡ 19916b0e-8920-4e64-a270-212a764b4cec
+s = Sphere((0., 0., 0.), 1.)
+
+# ╔═╡ 8fd1b1d1-32de-49c2-8522-2fa821150acc
+d = discretize(s)
+
+# ╔═╡ f749abb3-a49b-421a-a971-421d46d0dc31
+t = topology(d).connec[1]
+
+# ╔═╡ aae059cc-cffe-4047-96b5-b92f888a1ac9
+typeof(t)
+
+# ╔═╡ 3647a849-18de-4593-8574-08470889954a
+
+
+# ╔═╡ e3c83e67-e150-470d-ab95-c806dbafba92
+
 
 # ╔═╡ d45f9da4-8a86-480a-8042-12c71735e867
-md"### Интегралы с разным размером сетки при разном направлении на наблдателя"
+#md"### Интегралы с разным размером сетки при разном направлении на наблдателя"
 
 # ╔═╡ 5bc11ba8-cc98-4b01-84d5-19c87e15882c
 directions = [
@@ -111,40 +122,85 @@ directions = [
 ]
 
 # ╔═╡ 4a2de2fe-dbbb-4a0f-9547-7ddcb3f45395
-mass_quotient = 0.5
+mass_quotient = 1.
 
 # ╔═╡ b64c603c-93cd-4aaf-8574-7d882def903b
-normalized_integrals_for_different_d = [
-	calc_normalized_integrals(numbers_of_points, mass_quotient, f, direction)
-	for direction ∈ directions
-]
+# normalized_integrals_for_different_d = [
+# 	calc_normalized_integrals(numbers_of_points, mass_quotient, f, direction)
+# 	for direction ∈ directions
+# ]
 
 # ╔═╡ 99cf5335-96fa-4558-a107-b5bd75ef0c63
-plot(numbers_of_points, normalized_integrals_for_different_d,
-	legend_title = "Направление на наблюдателя",
-	labels = hcat(repr.(directions, context = :compact => true)...),
-	xlabel = "Число точек по каждому из двух измерений",
-	ylabel = "Нормализованное значение интеграла",
-	legend = :bottomright
-)
+# plot(numbers_of_points, normalized_integrals_for_different_d,
+# 	legend_title = "Направление на наблюдателя",
+# 	labels = hcat(repr.(directions, context = :compact => true)...),
+# 	xlabel = "Число точек по каждому из двух измерений",
+# 	ylabel = "Нормализованное значение интеграла",
+# 	legend = :bottomright
+# )
 
 # ╔═╡ b1207663-c4ec-40a4-bb21-6e944aa5d2de
-md"### Вывод"
+#md"### Вывод"
 
-# ╔═╡ f4ffe340-8e95-44b0-b1d0-f77a3ccd7a74
-md"""
-|число точек вдоль измерения | относительная точность|
-|:-----:|:-----:|
-| 16 | ``3 \cdot 10^{-2}``|
-| 32 | ``10^{-2}``|
-| 64 | ``2 \cdot 10^{-3}``|
-| 128 | ``5 \cdot 10^{-4}``|
-"""
+# ╔═╡ 10a2c580-c390-4e41-a0b7-87cd2d580d01
+errors
+
+# ╔═╡ 107710ee-f7d4-4223-8e75-13991175c479
+numbers_of_points
 
 # ╔═╡ 63e89b13-9597-4e3e-a6cb-a926755a881b
 md"Общее число точек (и по идее время интегрирования) пропорционально квадрату числа точек вдоль одного измерения.
 
 Я бы выбрал сетку `RegularDiscretization(64)`"
+
+# ╔═╡ 8fc983a9-6ecf-4f6b-aefc-5cd4d822ad6e
+md"### Сравнение с ``\pi r^2``"
+
+# ╔═╡ d6281c36-adcf-4562-9918-5064a2f6ff43
+md"""
+Предположим, что максимальное сечение достигается при ``\eta = 90^\circ``.
+
+Тогда ``\lambda = 0,\ \mu = \cos \varphi,\ \nu = \sin \varphi``,
+
+где ``\varphi`` — угол между радиус-вектором и плоскостью вращения.
+"""
+
+# ╔═╡ fa6e1265-8455-4aea-bd40-5895edaf878c
+md"""
+Потенциал оказывается равным
+```math
+\Omega = \frac1r + \frac{q}{\sqrt{1 + r^2}} + \frac{1+q}{2} r^2 (1 - \nu^2)
+```
+"""
+
+# ╔═╡ 63316566-a36e-46c6-b2d9-01e0815d9a64
+function Ω_on_cross_section(y, z, q)
+	r = hypot(y, z)
+	# r^2 * (1 - ν^2) = r^2 - r^2 sin(ϕ)^2 = r^2 - z^2 = y^2
+	return 1/r + q/√(1 + r^2) + (1+q)/2 * r^2 * y^2
+end
+
+# ╔═╡ 47ce3f12-2bb7-4366-bb8b-c21153851798
+begin
+	y = -1 : 0.005 : 1
+	z = -1 : 0.005 : 1
+	vals = Ω_on_cross_section.(y', z, mass_quotient)
+end
+
+# ╔═╡ 648d4ced-787e-48e5-a59b-a0467bb0f2cd
+contour(y, z, vals, fill = true, levels = 1.875 : 0.5 : 5, aspect_ratio = :equal)
+
+# ╔═╡ f236aaf1-a1ef-452c-82e8-12a8929fd4ee
+begin
+	l1 = LagrangePoint_X(mass_quotient)
+	Ω_critical(l1, mass_quotient)
+end
+
+# ╔═╡ 960a94e2-22b4-434a-b71c-1dd655e902fe
+md"Не является кругом, возможно, является эллипсом."
+
+# ╔═╡ 894c9598-39bc-4af9-8718-cd930343895c
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2876,18 +2932,33 @@ version = "1.4.1+0"
 # ╠═23a31efa-6cf1-48d7-aa31-b3feb7407283
 # ╠═7b52f359-ca6d-40e6-8605-dd91bff51d93
 # ╠═8d61398c-5356-46ba-814e-5b4c8fef9a7c
-# ╟─7e812d06-3cf1-42e6-9eed-d53ccbcd49fc
-# ╠═e226a2c0-07cd-46bd-9845-7ae5bf28ceb1
-# ╠═8391313d-ac93-478e-8358-4a631aed2710
-# ╠═6e266a40-efe8-4453-a2e3-74616bd2fb74
-# ╟─2c1a66b6-307b-42aa-9ff4-8fda8cf11ed7
-# ╟─d45f9da4-8a86-480a-8042-12c71735e867
+# ╠═cbbb86db-4980-458f-9102-ce04cd2ee815
+# ╠═e05ffa32-e613-450e-a14a-81602f93c0ee
+# ╠═85ce3aa6-ffa4-4a55-9a11-cdd3865cfac9
+# ╠═09f516be-533d-4235-a699-b0a3167ee5a7
+# ╠═19916b0e-8920-4e64-a270-212a764b4cec
+# ╠═8fd1b1d1-32de-49c2-8522-2fa821150acc
+# ╠═f749abb3-a49b-421a-a971-421d46d0dc31
+# ╠═aae059cc-cffe-4047-96b5-b92f888a1ac9
+# ╠═3647a849-18de-4593-8574-08470889954a
+# ╠═e3c83e67-e150-470d-ab95-c806dbafba92
+# ╠═d45f9da4-8a86-480a-8042-12c71735e867
 # ╠═5bc11ba8-cc98-4b01-84d5-19c87e15882c
 # ╠═4a2de2fe-dbbb-4a0f-9547-7ddcb3f45395
 # ╠═b64c603c-93cd-4aaf-8574-7d882def903b
 # ╠═99cf5335-96fa-4558-a107-b5bd75ef0c63
-# ╟─b1207663-c4ec-40a4-bb21-6e944aa5d2de
-# ╟─f4ffe340-8e95-44b0-b1d0-f77a3ccd7a74
+# ╠═b1207663-c4ec-40a4-bb21-6e944aa5d2de
+# ╠═10a2c580-c390-4e41-a0b7-87cd2d580d01
+# ╠═107710ee-f7d4-4223-8e75-13991175c479
 # ╟─63e89b13-9597-4e3e-a6cb-a926755a881b
+# ╟─8fc983a9-6ecf-4f6b-aefc-5cd4d822ad6e
+# ╟─d6281c36-adcf-4562-9918-5064a2f6ff43
+# ╟─fa6e1265-8455-4aea-bd40-5895edaf878c
+# ╠═63316566-a36e-46c6-b2d9-01e0815d9a64
+# ╠═47ce3f12-2bb7-4366-bb8b-c21153851798
+# ╠═648d4ced-787e-48e5-a59b-a0467bb0f2cd
+# ╠═f236aaf1-a1ef-452c-82e8-12a8929fd4ee
+# ╟─960a94e2-22b4-434a-b71c-1dd655e902fe
+# ╠═894c9598-39bc-4af9-8718-cd930343895c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
