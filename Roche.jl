@@ -1,6 +1,7 @@
 module Roche
 
 using Meshes
+using GeoTables
 using Roots
 using Interpolations
 using LinearAlgebra
@@ -11,10 +12,8 @@ export
     Ω_critical,
     roche_r,
     StretchToRocheLobe,
-    make_roche_mesh,
-    make_roche_meshdata,
+    make_roche_geotable,
     InterpolatedRocheMesh,
-    integrate_data_over_mesh,
     integrate_data_over_triangular_mesh,
     apply_radial_function
 
@@ -96,10 +95,13 @@ function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
         Point(coordinates(point) .* r)
         for (point, r) ∈ zip(points, r_list)
     ]
-    return meshdata(
+    new_mesh = SimpleMesh(
         new_points,
-        topology(interpolated_mesh.spherical_mesh),
-        Dict(:vertices => (r = r_list,))
+        topology(interpolated_mesh.spherical_mesh)
+    )
+    return GeoTable(
+        new_mesh,
+        Dict(0 => (r = r_list,))
     )
 end
 
@@ -108,11 +110,11 @@ end
 # Functions related to integration
 
 
-function integrate_data_over_triangular_mesh(mesh_data::MeshData, field_name, direction)
-    vertices_values = getfield(values(mesh_data, :vertices), field_name)
+function integrate_data_over_triangular_mesh(geo_table::GeoTable, field_name, direction)
+    vertices_values = getfield(values(geo_table, 0), field_name)
 
-    sum(faces(topology(domain(mesh_data)), 2)) do connection
-        face = materialize(connection, vertices(domain(mesh_data)))
+    sum(faces(topology(domain(geo_table)), 2)) do connection
+        face = materialize(connection, vertices(domain(geo_table)))
         visible_area = signed_visible_area(face, direction)
         if visible_area < 0
             return zero(visible_area)
@@ -135,14 +137,13 @@ function avg_over_face(vertices_values, connection)
 end
 
 
-function apply_radial_function(mesh_data::MeshData, f, field_name)
-    r_list = values(mesh_data, :vertices).r
+function apply_radial_function(geo_table::GeoTable, f, field_name)
+    r_list = values(geo_table, 0).r
     f_list = f.(r_list)
 
-    return meshdata(
-        vertices(domain(mesh_data)),
-        topology(domain(mesh_data)),
-        Dict(:vertices => (r = r_list, field_name => f_list,))
+    return GeoTable(
+        domain(geo_table),
+        Dict(0 => (r = r_list, field_name => f_list,))
     ) 
 end
 
@@ -154,48 +155,22 @@ end
 
 # Для создания сетки один раз
 
-# Similar to https://github.com/JuliaGeometry/Meshes.jl/blob/a0487c6824d6ee9d7389edc25ae937f1e4cf26fd/src/transforms/translate.jl
-
-struct StretchToRocheLobe <: StatelessGeometricTransform
-    mass_quotient
-    lagrange1_x
-    Ω0
-end
-
-function StretchToRocheLobe(mass_quotient)
+function make_roche_geotable(mass_quotient, discretization_method = RegularDiscretization(10))
+    sphere = Sphere((0. ,0., 0.), 1.)
+    spherical_mesh = discretize(sphere, discretization_method) |>
+                    Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
+                    simplexify
     lagrange1_x = LagrangePoint_X(mass_quotient)
     Ω0 = Ω_critical(lagrange1_x, mass_quotient)
-    return StretchToRocheLobe(mass_quotient, lagrange1_x, Ω0)
-end
-
-Meshes.preprocess(transform::StretchToRocheLobe, object) = transform
-
-function Meshes.applypoint(::StretchToRocheLobe, points, prep::StretchToRocheLobe)
-
-    function transform_point(point::Point)
-        r = roche_r(prep.Ω0, prep.lagrange1_x, prep.mass_quotient, point)
-        Point(coordinates(point) .* r)
-    end
-
-    return map(transform_point, points), prep
-end
-
-function make_roche_mesh(mass_quotient, discretization_method = RegularDiscretization(10))
-    sphere = Sphere((0. ,0., 0.), 1.)
-    return discretize(sphere, discretization_method) |>
-            Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
-            simplexify |>
-            StretchToRocheLobe(mass_quotient)
-end
-
-function make_roche_meshdata(mass_quotient, discretization_method = RegularDiscretization(10))
-    mesh = make_roche_mesh(mass_quotient, discretization_method)
-    r_list = norm.(coordinates.(vertices(mesh)))
-    return meshdata(
-        vertices(mesh),
-        topology(mesh),
-        Dict(:vertices => (r = r_list,))
+    r_values = roche_r.(Ω0, lagrange1_x, mass_quotient, vertices(spherical_mesh))
+    return GeoTable(
+        spherical_mesh,
+        Dict(0 => (r = r_values,))
     )
+end
+
+function simplexify_quadrangles(mesh::SimpleMesh)
+    
 end
 
 end
