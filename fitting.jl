@@ -72,13 +72,13 @@ plot(freq(pgram), power(pgram), xlabel = "частота (1/день)", title = 
 
 # ╔═╡ dd6356dd-0e4e-43dc-8f7c-abb5ba01e3ab
 begin
-	period = 2findmaxperiod(pgram)[1]
+	estimated_period = 2findmaxperiod(pgram)[1]
 	findmaxperiod(pgram)
 end
 
 # ╔═╡ 3c954b9a-bccb-4583-a7a3-dedcacd9d032
 scatter(
-	points.day .% period,
+	points.day .% (estimated_period),
 	points.K,
 	yerr = points.K_err,
 	markersize = 2,
@@ -126,8 +126,8 @@ initial_params = [
 	π/2, 	# observer_angle
 	2.85,  	# offset
 	6.,   	# scale
-	-2.45,  	# initial_phase
-	period 	# period
+	-2.45,  # initial_phase
+	estimated_period
 ]
 
 # ╔═╡ d959bfb0-4b4e-4272-bc84-948a21bab2a7
@@ -143,7 +143,7 @@ initial_params = [
 # ╔═╡ 263282eb-4f69-47bc-a6f1-b1eb45e5e64c
 begin
 	scatter(
-		points.day .% period,
+		points.day .% estimated_period,
 		points.K,
 		yerr = points.K_err,
 		markersize = 2,
@@ -152,7 +152,7 @@ begin
 		title = "K"
 	)
 
-	days = 0 : period
+	days = 0 : estimated_period
 
 	plot!(
 		days,
