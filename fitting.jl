@@ -109,18 +109,24 @@ end
 func(r) = 1.
 
 # ╔═╡ f3daea21-77fe-4ae9-bc92-73729ec172ec
-function log_luminocity(time, mass_quotient, observer_angle, offset, scale,
+function log_luminocity(times, mass_quotient, observer_angle, offset, scale,
 						initial_phase, period, interpolated_mesh, func)
-	phase = initial_phase + 2π * time / period
-	direction = (
+	phases = @. initial_phase + 2π * times / period
+
+	directions = [(
 		cos(observer_angle),
 		sin(observer_angle) * cos(phase),
 		sin(observer_angle) * sin(phase)
-	)
+	) for phase ∈ phases]
+
 	mesh = interpolated_mesh(mass_quotient)
 	mesh = apply_radial_function(mesh, func, :f)
-	luminocity = integrate_data_over_triangular_mesh(mesh, :f, direction)
-	return -scale * log10(luminocity) + offset
+
+	luminocities = [
+		integrate_data_over_triangular_mesh(mesh, :f, direction)
+		for direction ∈ directions
+	]
+	return @. -scale * log10(luminocities) + offset
 end
 
 # ╔═╡ 7d9c7465-54dd-407c-beb8-3e67d5b84dd7
@@ -133,14 +139,12 @@ initial_params = [
 ]
 
 # ╔═╡ d959bfb0-4b4e-4272-bc84-948a21bab2a7
-# takes forever
-
-# fit = curve_fit(
-# 	(t, p) -> log_luminocity.(t, p..., estimated_period, Ref(interpolated_mesh), func),
-# 	points.day .% estimated_period,
-# 	points.K,
-# 	initial_params
-# )
+fit = curve_fit(
+	(ts, p) -> log_luminocity(ts, p..., estimated_period, interpolated_mesh, func),
+	points.day,
+	points.K,
+	initial_params
+)
 
 # ╔═╡ 263282eb-4f69-47bc-a6f1-b1eb45e5e64c
 begin
@@ -158,10 +162,14 @@ begin
 
 	plot!(
 		days,
-		log_luminocity.(days, initial_params..., estimated_period,
-						Ref(interpolated_mesh), func)
+		log_luminocity(days, fit.param..., estimated_period,
+						interpolated_mesh, func)
 	)
 end
+
+# ╔═╡ 4f1c008d-ead1-4330-931e-283cc35ff7c7
+@time log_luminocity(points.day, initial_params..., estimated_period,
+					 interpolated_mesh, func)
 
 # ╔═╡ 63ad0853-035e-464b-8bd2-fb39274028ed
 md"### Turing"
@@ -174,25 +182,19 @@ md"### Turing"
 	offset ~ Flat()
 	scale ~ FlatPos(0.)
 
-	for point in eachrow(points)
-		predicted = log_luminocity(point.day, mass_quotient, observer_angle,
-									offset, scale, initial_phase, estimated_period, interpolated_mesh, func)
-		expected = point.K
-		expected ~ Normal(predicted, 0.05)
-	end
+	predicted = log_luminocity(points.day, mass_quotient, observer_angle,
+								offset, scale, initial_phase, estimated_period,
+								interpolated_mesh, func)
+	expected = points.K
+	expected ~ MvNormal(predicted, 0.05)
 end
 
 # ╔═╡ 8dd79895-7d3e-4eae-bb4e-8a6d269dd663
 model_instance = model(interpolated_mesh, points);
 
-# ╔═╡ 1191060b-78ca-42d9-bf39-95c5683aeb3d
-@time log_luminocity(10., 1., π/2, 0., 1., 0., estimated_period, interpolated_mesh, func)
-
-# ╔═╡ 92cc0afe-90a3-4c55-9a1d-6e15d67944ab
-typeof(apply_radial_function(interpolated_mesh(1.0), func, :f))
-
 # ╔═╡ 8fb279b7-2fb1-4e5d-9879-40a950faf3d2
-samples = sample(model_instance, HMC(0.05, 10), 10)
+# takes forever
+# samples = sample(model_instance, NUTS(), 10)
 
 # ╔═╡ 8c9cf6e0-f83a-4608-9ce4-01ba0cf1d270
 import Optim
@@ -212,15 +214,26 @@ begin
 		title = "K"
 	)
 
-	vals = log_luminocity.(
+	vals = log_luminocity(
 		days,
 		coef(mle_estimate)[[:mass_quotient, :observer_angle, :offset, :scale, :initial_phase]]...,
 		estimated_period,
-		Ref(interpolated_mesh),
+		interpolated_mesh,
 		func
 	)
 	plot!(days, vals)
 end
+
+# ╔═╡ 9aa37acb-26c4-492a-8082-c1cc72450ec3
+	scatter(
+		points.day .% estimated_period,
+		points.K,
+		yerr = points.K_err,
+		markersize = 2,
+		xlabel = "Julian day % period",
+		ylabel = "Звёздная величина",
+		title = "K"
+	)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2621,15 +2634,15 @@ version = "1.4.1+1"
 # ╠═7d9c7465-54dd-407c-beb8-3e67d5b84dd7
 # ╠═d959bfb0-4b4e-4272-bc84-948a21bab2a7
 # ╠═263282eb-4f69-47bc-a6f1-b1eb45e5e64c
+# ╠═4f1c008d-ead1-4330-931e-283cc35ff7c7
 # ╟─63ad0853-035e-464b-8bd2-fb39274028ed
 # ╠═16a8da3d-bbb6-4c0f-87fc-5258850c5a10
 # ╠═433a0f71-f277-4d03-bef4-a17769d679cc
 # ╠═8dd79895-7d3e-4eae-bb4e-8a6d269dd663
-# ╠═1191060b-78ca-42d9-bf39-95c5683aeb3d
-# ╠═92cc0afe-90a3-4c55-9a1d-6e15d67944ab
 # ╠═8fb279b7-2fb1-4e5d-9879-40a950faf3d2
 # ╠═8c9cf6e0-f83a-4608-9ce4-01ba0cf1d270
 # ╠═b91b4e10-154c-4a23-a875-506a64d240ec
 # ╠═f7543b72-94c3-47cd-95cd-79c7464b3bbe
+# ╠═9aa37acb-26c4-492a-8082-c1cc72450ec3
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
