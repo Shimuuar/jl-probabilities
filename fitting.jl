@@ -182,11 +182,14 @@ md"### Turing"
 	offset ~ Flat()
 	scale ~ FlatPos(0.)
 
-	predicted = log_luminocity(points.day, mass_quotient, observer_angle,
-								offset, scale, initial_phase, estimated_period,
-								interpolated_mesh, func)
-	expected = points.K
-	expected ~ MvNormal(predicted, 0.05)
+	predictions = log_luminocity(points.day, mass_quotient, observer_angle,
+									offset, scale, initial_phase, estimated_period,
+									interpolated_mesh, func)
+
+	for (experimental, predicted) in zip(points.K, predictions)
+		experimental ~ Normal(predicted, 0.05)
+	end
+	# experimental ~ MvNormal(predictions, 0.05) # так сильно дольше почему-то
 end
 
 # ╔═╡ 8dd79895-7d3e-4eae-bb4e-8a6d269dd663
@@ -194,7 +197,7 @@ model_instance = model(interpolated_mesh, points);
 
 # ╔═╡ 8fb279b7-2fb1-4e5d-9879-40a950faf3d2
 # takes forever
-# samples = sample(model_instance, NUTS(), 10)
+samples = sample(model_instance, HMC(0.05, 10), 10)
 
 # ╔═╡ 8c9cf6e0-f83a-4608-9ce4-01ba0cf1d270
 import Optim
