@@ -98,7 +98,7 @@ begin
 	mass_quotients = 0.01:0.01:10
 
 	spherical_mesh = 
-		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(128)) |>
+		discretize(Sphere((0. ,0., 0.), 1.), RegularDiscretization(48)) |>
 		Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
 		simplexify
 
@@ -109,14 +109,14 @@ end
 func(r) = 1.
 
 # ╔═╡ f3daea21-77fe-4ae9-bc92-73729ec172ec
-function log_luminocity(times, mass_quotient, observer_angle, offset, scale,
+function log_luminocity(times, mass_quotient, observer_angle, offset,
 						initial_phase, period, interpolated_mesh, func)
 	phases = @. initial_phase + 2π * times / period
 
 	directions = [(
-		cos(observer_angle),
 		sin(observer_angle) * cos(phase),
-		sin(observer_angle) * sin(phase)
+		sin(observer_angle) * sin(phase),
+		cos(observer_angle)
 	) for phase ∈ phases]
 
 	mesh = interpolated_mesh(mass_quotient)
@@ -126,15 +126,14 @@ function log_luminocity(times, mass_quotient, observer_angle, offset, scale,
 		integrate_data_over_triangular_mesh(mesh, :f, direction)
 		for direction ∈ directions
 	]
-	return @. -scale * log10(luminocities) + offset
+	return @. -2.5 * log10(luminocities) + offset
 end
 
 # ╔═╡ 7d9c7465-54dd-407c-beb8-3e67d5b84dd7
 initial_params = [
 	1.,  	# mass quotient
 	π/2, 	# observer_angle
-	2.85,  	# offset
-	6.,   	# scale
+	3.85,  	# offset
 	-2.45,  # initial_phase
 ]
 
@@ -175,35 +174,65 @@ end
 md"### Turing"
 
 # ╔═╡ 433a0f71-f277-4d03-bef4-a17769d679cc
-@model function model(interpolated_mesh, points)
-	mass_quotient ~ Uniform(0.1, 1.)
+@model function model(interpolated_mesh, days, values)
+	mass_quotient ~ Uniform(0.1, 10.)
 	observer_angle ~ Uniform(0, π)
-	initial_phase ~ Uniform(0., π)
 	offset ~ Flat()
-	scale ~ FlatPos(0.)
+	initial_phase ~ Uniform(-π, π)
 
-	predictions = log_luminocity(points.day, mass_quotient, observer_angle,
-									offset, scale, initial_phase, estimated_period,
+	predictions = log_luminocity(days, mass_quotient, observer_angle,
+									offset, initial_phase, estimated_period,
 									interpolated_mesh, func)
-
-	for (experimental, predicted) in zip(points.K, predictions)
-		experimental ~ Normal(predicted, 0.05)
-	end
-	# experimental ~ MvNormal(predictions, 0.05) # так сильно дольше почему-то
+	values .~ Normal.(predictions, 0.05)
 end
 
 # ╔═╡ 8dd79895-7d3e-4eae-bb4e-8a6d269dd663
-model_instance = model(interpolated_mesh, points);
+model_instance = model(interpolated_mesh, points.day, points.K);
+
+# ╔═╡ a52fef0d-2a2c-4c90-a493-7a4ecec79d16
+DynamicPPL.syms(DynamicPPL.VarInfo(model_instance))
 
 # ╔═╡ 8fb279b7-2fb1-4e5d-9879-40a950faf3d2
-# takes forever
-samples = sample(model_instance, HMC(0.05, 10), 10)
+samples = sample(model_instance, NUTS(), 10, init_params = initial_params)
+
+# ╔═╡ 8980206f-6475-40a8-b9ae-4713d0760974
+begin
+	scatter(
+		points.day .% estimated_period,
+		points.K,
+		yerr = points.K_err,
+		markersize = 2,
+		xlabel = "Julian day % period",
+		ylabel = "Звёздная величина",
+		title = "K"
+	)
+
+	for i in 1:10
+	
+		vals = log_luminocity(
+			days,
+			samples[i][:mass_quotient].data[1],
+			samples[i][:observer_angle].data[1],
+			samples[i][:offset].data[1],
+			samples[i][:initial_phase].data[1],
+			estimated_period,
+			interpolated_mesh,
+			func
+		)
+		plot!(days, vals)
+	end
+	plot!()
+end
 
 # ╔═╡ 8c9cf6e0-f83a-4608-9ce4-01ba0cf1d270
 import Optim
 
 # ╔═╡ b91b4e10-154c-4a23-a875-506a64d240ec
-mle_estimate = Optim.optimize(model_instance, MLE())
+mle_estimate = Optim.optimize(model(interpolated_mesh, points.day, points.K), MLE())
+
+# ╔═╡ 38871d3c-40d1-445b-85c1-b2f3ff499988
+# takes forever
+map_estimate = Optim.optimize(model(interpolated_mesh, points.day, points.K), MAP())
 
 # ╔═╡ f7543b72-94c3-47cd-95cd-79c7464b3bbe
 begin
@@ -219,7 +248,7 @@ begin
 
 	vals = log_luminocity(
 		days,
-		coef(mle_estimate)[[:mass_quotient, :observer_angle, :offset, :scale, :initial_phase]]...,
+		coef(mle_estimate)[[:mass_quotient, :observer_angle, :offset, :initial_phase]]...,
 		estimated_period,
 		interpolated_mesh,
 		func
@@ -282,9 +311,9 @@ manifest_format = "2.0"
 project_hash = "43ede58cdc7f05ee170e46b9ed0c3d79327b7145"
 
 [[deps.ADTypes]]
-git-tree-sha1 = "f5c25e8a5b29b5e941b7408bc8cc79fea4d9ef9a"
+git-tree-sha1 = "5d2e21d7b0d8c22f67483ef95ebdc39c0e6b6003"
 uuid = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
-version = "0.1.6"
+version = "0.2.4"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1344,12 +1373,11 @@ version = "2.1.1"
 
 [[deps.LogDensityProblemsAD]]
 deps = ["DocStringExtensions", "LogDensityProblems", "Requires", "SimpleUnPack"]
-git-tree-sha1 = "7841ebecc60703fa978cbe9623e1a37dcaf96b75"
+git-tree-sha1 = "a0512ad65f849536b5a52e59b05c59c25cdad943"
 uuid = "996a588d-648d-4e1f-a8f0-a84b347e47b1"
-version = "1.6.1"
+version = "1.5.0"
 
     [deps.LogDensityProblemsAD.extensions]
-    LogDensityProblemsADADTypesExt = "ADTypes"
     LogDensityProblemsADEnzymeExt = "Enzyme"
     LogDensityProblemsADFiniteDifferencesExt = "FiniteDifferences"
     LogDensityProblemsADForwardDiffBenchmarkToolsExt = ["BenchmarkTools", "ForwardDiff"]
@@ -1359,7 +1387,6 @@ version = "1.6.1"
     LogDensityProblemsADZygoteExt = "Zygote"
 
     [deps.LogDensityProblemsAD.weakdeps]
-    ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
     BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
     Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
     FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
@@ -2642,9 +2669,12 @@ version = "1.4.1+1"
 # ╠═16a8da3d-bbb6-4c0f-87fc-5258850c5a10
 # ╠═433a0f71-f277-4d03-bef4-a17769d679cc
 # ╠═8dd79895-7d3e-4eae-bb4e-8a6d269dd663
+# ╠═a52fef0d-2a2c-4c90-a493-7a4ecec79d16
 # ╠═8fb279b7-2fb1-4e5d-9879-40a950faf3d2
+# ╠═8980206f-6475-40a8-b9ae-4713d0760974
 # ╠═8c9cf6e0-f83a-4608-9ce4-01ba0cf1d270
 # ╠═b91b4e10-154c-4a23-a875-506a64d240ec
+# ╠═38871d3c-40d1-445b-85c1-b2f3ff499988
 # ╠═f7543b72-94c3-47cd-95cd-79c7464b3bbe
 # ╠═9aa37acb-26c4-492a-8082-c1cc72450ec3
 # ╟─00000000-0000-0000-0000-000000000001
