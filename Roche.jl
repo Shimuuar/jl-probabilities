@@ -5,17 +5,21 @@ using GeoTables
 using Roots
 using Interpolations
 using LinearAlgebra
+using ForwardDiff
 
-export 
+export
     Ω_potential,
-    LagrangePoint_X, 
+    Ω_grad,
+    LagrangePoint_X,
     Ω_critical,
     roche_r,
     StretchToRocheLobe,
     make_roche_geotable,
     InterpolatedRocheMesh,
     integrate_data_over_triangular_mesh,
-    apply_radial_function
+    apply_radial_function,
+    apply_function,
+    luminocity_at_point
 
 
 function Ω_potential(r; mass_quotient, point_on_unit_sphere::Point)
@@ -24,6 +28,22 @@ function Ω_potential(r; mass_quotient, point_on_unit_sphere::Point)
         mass_quotient * (1 / √(1 + r^2 - 2r*λ) - λ*r) +
         (1. + mass_quotient) / 2 * r^2 * (1. - ν^2)
 end
+
+function Ω_potential(mass_quotient, coords::Vec)
+    x, y, z = coords
+    r = hypot(x, y, z)
+    return 1/r +
+        mass_quotient * (1 / √(1 + r^2 - 2x) - x) +
+        (1. + mass_quotient) / 2 * (x^2 + y^2)
+end
+
+function Ω_grad(mass_quotient, coords::Vec)
+    return ForwardDiff.gradient(
+        xyz -> Ω_potential(mass_quotient, xyz),
+        coords
+    )
+end
+
 
 function LagrangePoint_X(mass_quotient)
     function Ω_x_derivative(x)
@@ -57,28 +77,42 @@ end
 struct InterpolatedRocheMesh
     spherical_mesh
     mass_quotient_knots
-    interpolants
+    r_interpolants
+    g_interpolants
 end
 
 
 function InterpolatedRocheMesh(spherical_mesh::SimpleMesh, mass_quotient_knots)
 
     r_values = zeros(nvertices(spherical_mesh), length(mass_quotient_knots))
+    g_values = zeros(nvertices(spherical_mesh), length(mass_quotient_knots))
 
-    for (mass_quotient, r_values_for_quotient) ∈
-            zip(mass_quotient_knots, eachcol(r_values))
+    for (mass_quotient, r_values_for_quotient, g_values_for_quotient) ∈
+            zip(mass_quotient_knots, eachcol(r_values), eachcol(g_values))
 
         lagrange1_x = LagrangePoint_X(mass_quotient)
         Ω0 = Ω_critical(lagrange1_x, mass_quotient)
         r_values_for_quotient .= roche_r.(Ω0, lagrange1_x, mass_quotient, vertices(spherical_mesh))
+
+        p0 = Point(-1., 0., 0.)
+        r0 = roche_r(Ω0, lagrange1_x, mass_quotient, p0)
+        g0 = norm(Ω_grad(mass_quotient, coordinates(p0) .* r0))
+
+        coords = coordinates.(vertices(spherical_mesh)) .* r_values_for_quotient
+        g_values_for_quotient .= norm.(Ω_grad.(mass_quotient, coords)) ./ g0
     end
 
-    interpolants = [
+    r_interpolants = [
         cubic_spline_interpolation(mass_quotient_knots, r_values_for_vertex)
         for r_values_for_vertex ∈ eachrow(r_values)
     ]
 
-    return InterpolatedRocheMesh(spherical_mesh, mass_quotient_knots, interpolants)
+    g_interpolants = [
+        cubic_spline_interpolation(mass_quotient_knots, g_values_for_vertex)
+        for g_values_for_vertex ∈ eachrow(g_values)
+    ]
+
+    return InterpolatedRocheMesh(spherical_mesh, mass_quotient_knots, r_interpolants, g_interpolants)
 end
 
 
@@ -87,10 +121,9 @@ end
 function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
     points = vertices(interpolated_mesh.spherical_mesh)
 
-    r_list = [
-        interpolant(mass_quotient)
-        for interpolant ∈ interpolated_mesh.interpolants
-    ]
+    r_list = mass_quotient .|> interpolated_mesh.r_interpolants
+    g_list = mass_quotient .|> interpolated_mesh.g_interpolants
+
     new_points = [
         Point(coordinates(point) .* r)
         for (point, r) ∈ zip(points, r_list)
@@ -101,7 +134,7 @@ function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
     )
     return GeoTable(
         new_mesh,
-        Dict(0 => (r = r_list,))
+        Dict(0 => (r = r_list, g = g_list,))
     )
 end
 
@@ -147,6 +180,15 @@ function apply_radial_function(geo_table::GeoTable, f, field_name)
     ) 
 end
 
+function apply_function(geo_table::GeoTable, f, arg_field_name, result_field_name)
+    data = values(geo_table, 0)
+    f_list = f.(data[arg_field_name])
+
+    return GeoTable(
+        domain(geo_table),
+        Dict(0 => merge(data, (result_field_name => f_list,)))
+    )
+end
 
 
 

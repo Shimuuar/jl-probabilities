@@ -10,6 +10,7 @@ begin
 	using GeoTables
 	import Roots
 	import Interpolations
+	import ForwardDiff
 	using Revise
 	includet("./Roche.jl")
 	using ..Roche
@@ -106,7 +107,10 @@ begin
 end
 
 # ╔═╡ 888e44d7-abb4-4973-95c1-92b73a47b125
-func(r) = 1.
+constant(r) = 1.
+
+# ╔═╡ 6b246174-e39a-48a3-8ec6-275b7cd90468
+id(g) = g
 
 # ╔═╡ f3daea21-77fe-4ae9-bc92-73729ec172ec
 function log_luminocity(times, mass_quotient, observer_angle, offset,
@@ -120,10 +124,10 @@ function log_luminocity(times, mass_quotient, observer_angle, offset,
 	) for phase ∈ phases]
 
 	mesh = interpolated_mesh(mass_quotient)
-	mesh = apply_radial_function(mesh, func, :f)
+	mesh = apply_function(mesh, func, :g, :L)
 
 	luminocities = [
-		integrate_data_over_triangular_mesh(mesh, :f, direction)
+		integrate_data_over_triangular_mesh(mesh, :L, direction)
 		for direction ∈ directions
 	]
 	return @. -2.5 * log10(luminocities) + offset
@@ -139,10 +143,27 @@ initial_params = [
 
 # ╔═╡ d959bfb0-4b4e-4272-bc84-948a21bab2a7
 fit = curve_fit(
-	(ts, p) -> log_luminocity(ts, p..., estimated_period, interpolated_mesh, func),
+	(ts, p) -> log_luminocity(ts, p..., estimated_period, interpolated_mesh, constant),
 	points.day,
 	points.K,
 	initial_params
+)
+
+# ╔═╡ 1ed5b41d-29ce-4ed4-b0c2-5c1bbcd09023
+initial_params2 = [
+	0.5,  	# mass quotient
+	π/2, 	# observer_angle
+	4.4,  	# offset
+	0.8,  	# initial_phase
+	0.05,
+]
+
+# ╔═╡ 4ea50be7-082d-4ba7-9f53-7c17d5742373
+fit2 = curve_fit(
+	(ts, p) -> log_luminocity(ts, p..., estimated_period, interpolated_mesh, id),
+	points.day,
+	points.K,
+	initial_params2
 )
 
 # ╔═╡ 263282eb-4f69-47bc-a6f1-b1eb45e5e64c
@@ -161,14 +182,14 @@ begin
 
 	plot!(
 		days,
-		log_luminocity(days, fit.param..., estimated_period,
-						interpolated_mesh, func)
+		log_luminocity(days, initial_params2..., estimated_period,
+						interpolated_mesh, id)
 	)
 end
 
 # ╔═╡ 4f1c008d-ead1-4330-931e-283cc35ff7c7
 @time log_luminocity(points.day, initial_params..., estimated_period,
-					 interpolated_mesh, func)
+					 interpolated_mesh, constant)
 
 # ╔═╡ 63ad0853-035e-464b-8bd2-fb39274028ed
 md"### Turing"
@@ -182,8 +203,9 @@ md"### Turing"
 
 	predictions = log_luminocity(days, mass_quotient, observer_angle,
 									offset, initial_phase, estimated_period,
-									interpolated_mesh, func)
-	values .~ Normal.(predictions, 0.05)
+									interpolated_mesh, id)
+	sigma ~ Uniform(0,0.1)
+	values .~ Normal.(predictions, sigma)
 end
 
 # ╔═╡ 8dd79895-7d3e-4eae-bb4e-8a6d269dd663
@@ -193,7 +215,7 @@ model_instance = model(interpolated_mesh, points.day, points.K);
 DynamicPPL.syms(DynamicPPL.VarInfo(model_instance))
 
 # ╔═╡ 8fb279b7-2fb1-4e5d-9879-40a950faf3d2
-samples = sample(model_instance, NUTS(), 10, init_params = initial_params)
+samples = sample(model_instance, NUTS(), 20, init_params = initial_params2)
 
 # ╔═╡ 8980206f-6475-40a8-b9ae-4713d0760974
 begin
@@ -207,19 +229,19 @@ begin
 		title = "K"
 	)
 
-	for i in 1:10
+	for i in 1:20
 	
 		vals = log_luminocity(
-			days,
+			0:estimated_period,
 			samples[i][:mass_quotient].data[1],
 			samples[i][:observer_angle].data[1],
 			samples[i][:offset].data[1],
 			samples[i][:initial_phase].data[1],
 			estimated_period,
 			interpolated_mesh,
-			func
+			id
 		)
-		plot!(days, vals)
+		plot!(0:estimated_period, vals)
 	end
 	plot!()
 end
@@ -231,7 +253,6 @@ import Optim
 mle_estimate = Optim.optimize(model(interpolated_mesh, points.day, points.K), MLE())
 
 # ╔═╡ 38871d3c-40d1-445b-85c1-b2f3ff499988
-# takes forever
 map_estimate = Optim.optimize(model(interpolated_mesh, points.day, points.K), MAP())
 
 # ╔═╡ f7543b72-94c3-47cd-95cd-79c7464b3bbe
@@ -246,14 +267,21 @@ begin
 		title = "K"
 	)
 
-	vals = log_luminocity(
-		days,
+	vals_mle = log_luminocity(
+		0:estimated_period,
 		coef(mle_estimate)[[:mass_quotient, :observer_angle, :offset, :initial_phase]]...,
 		estimated_period,
 		interpolated_mesh,
-		func
+		id
 	)
-	plot!(days, vals)
+	vals_map = log_luminocity(
+		0:estimated_period,
+		coef(map_estimate)[[:mass_quotient, :observer_angle, :offset, :initial_phase]]...,
+		estimated_period,
+		interpolated_mesh,
+		id
+	)
+	plot!(0:estimated_period, [vals_mle vals_map])
 end
 
 # ╔═╡ 9aa37acb-26c4-492a-8082-c1cc72450ec3
@@ -272,6 +300,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GeoTables = "e502b557-6362-48c1-8219-d30d308dcdb0"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 LombScargle = "fc60dff9-86e7-5f2f-a8a0-edeadbb75bd9"
@@ -288,6 +317,7 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 [compat]
 DataFrames = "~1.6.1"
 DelimitedFiles = "~1.9.1"
+ForwardDiff = "~0.10.36"
 GeoTables = "~1.7.3"
 Interpolations = "~0.14.7"
 LombScargle = "~1.0.3"
@@ -308,7 +338,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "43ede58cdc7f05ee170e46b9ed0c3d79327b7145"
+project_hash = "2389f53ba4bdc31168563a1891a4332d0c3ec678"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "5d2e21d7b0d8c22f67483ef95ebdc39c0e6b6003"
@@ -2659,10 +2689,13 @@ version = "1.4.1+1"
 # ╟─76d9a316-e081-432e-a9c3-41fe38b1b159
 # ╠═424dd0d7-e086-4e7c-a6e4-24ea90647310
 # ╠═888e44d7-abb4-4973-95c1-92b73a47b125
+# ╠═6b246174-e39a-48a3-8ec6-275b7cd90468
 # ╠═f3daea21-77fe-4ae9-bc92-73729ec172ec
 # ╠═f7528af0-87af-452d-bb04-56179544b0a6
 # ╠═7d9c7465-54dd-407c-beb8-3e67d5b84dd7
 # ╠═d959bfb0-4b4e-4272-bc84-948a21bab2a7
+# ╠═4ea50be7-082d-4ba7-9f53-7c17d5742373
+# ╠═1ed5b41d-29ce-4ed4-b0c2-5c1bbcd09023
 # ╠═263282eb-4f69-47bc-a6f1-b1eb45e5e64c
 # ╠═4f1c008d-ead1-4330-931e-283cc35ff7c7
 # ╟─63ad0853-035e-464b-8bd2-fb39274028ed
