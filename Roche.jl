@@ -22,7 +22,8 @@ export
     luminocity_at_point
 
 
-function Ω_potential(r; mass_quotient, point_on_unit_sphere::Point)
+
+function Ω_potential(r::Number; mass_quotient::Number, point_on_unit_sphere::Point)
     λ, μ, ν = coordinates(point_on_unit_sphere)
     return 1/r +
         mass_quotient * (1 / √(1 + r^2 - 2r*λ) - λ*r) +

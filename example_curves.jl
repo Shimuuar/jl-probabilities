@@ -39,8 +39,8 @@ end
 
 # ╔═╡ 87a082a1-4e29-4702-acb0-35afc8e51735
 begin
-	local observer_angle = π/2
-	local phases = 0 : 0.2 : π/2
+	local observer_angle = pi/4
+	local phases = 0 : 0.2 : 2*π
 	directions = [(
 		sin(observer_angle) * cos(phase),
 		sin(observer_angle) * sin(phase),
@@ -57,6 +57,12 @@ begin
 	end
 
 	f
+end
+
+# ╔═╡ 3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
+begin
+	local m = interpolated_mesh(1)
+	f = viz(domain(m), color = values(m, 0).r)
 end
 
 # ╔═╡ 1f6a872e-5411-47e7-a642-97e9180af6c7
@@ -89,6 +95,9 @@ constant(g) = 1.
 # ╔═╡ a736f7b3-0f7d-4b39-a479-5293e5666b0c
 id(g) = g
 
+# ╔═╡ 05465b1e-1b8e-4f76-9ae8-791e2de3c050
+
+
 # ╔═╡ 424af3e5-703b-46a1-be45-e87f78714517
 params = (;
 	times = 0:0.05:2π,
@@ -101,24 +110,9 @@ params = (;
 	func = id
 )
 
-# ╔═╡ 9f9e0027-09fe-4f6f-85df-9aff63f849e9
-plot(
-	params.times,
-	hcat(
-		log_luminocity(; params..., mass_quotient = 0.1),
-		log_luminocity(; params..., mass_quotient = 0.2),
-		log_luminocity(; params..., mass_quotient = 0.4),
-		log_luminocity(; params..., mass_quotient = 0.8),
-		log_luminocity(; params..., mass_quotient = 1.6),
-		log_luminocity(; params..., mass_quotient = 3.2),
-	),
-	title = "При разном соотношении масс",
-	xlabel = "phase"
-)
-
 # ╔═╡ 11872494-739a-4ada-8572-733d1756b6a5
 begin
-	plot(title = "При разном соотношении масс", xlabel = "phase")
+	plot(title = "При разном соотношении масс", xlabel = "phase", ylabel = "m", yflip = true)
 	for q ∈ [0.1, 0.2, 0.4, 0.8, 1.6, 3.2]
 		plot!(
 			params.times,
@@ -131,11 +125,11 @@ end
 
 # ╔═╡ 41327e56-5682-438b-bb91-a7acc918d589
 begin
-	plot(title = "При разном наклонении", xlabel = "phase")
+	plot(title = "При разном наклонении", xlabel = "phase", ylabel = "m", yflip = true)
 	for i ∈ [0., π/6, π/4, π/3, π/2]
 		plot!(
 			params.times,
-			log_luminocity(; params..., observer_angle = i),
+			log_luminocity(; params..., mass_quotient = 1, observer_angle = i),
 			label = "i = $(round(i, digits = 3))"
 		)
 	end
@@ -2420,12 +2414,13 @@ version = "1.4.1+1"
 # ╠═74d8becd-7529-47dd-bf4b-9b1cfe3f17de
 # ╠═87a082a1-4e29-4702-acb0-35afc8e51735
 # ╠═c72dec8c-9841-45af-bb0f-c0818102fe4f
+# ╠═3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═8fdabe48-de0f-40d0-8236-b7fec30332a1
 # ╠═70e4ec90-ab82-4723-b475-a46b8b3b1031
 # ╠═a736f7b3-0f7d-4b39-a479-5293e5666b0c
+# ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
 # ╠═424af3e5-703b-46a1-be45-e87f78714517
-# ╠═9f9e0027-09fe-4f6f-85df-9aff63f849e9
 # ╠═11872494-739a-4ada-8572-733d1756b6a5
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
 # ╟─00000000-0000-0000-0000-000000000001
