@@ -31,7 +31,7 @@ function cached_sample(chain_params, cache_dir::String="cache")
 
         description_file = joinpath(cache_dir, "parameters.json")
         open(description_file, "w") do f
-            JSON3.pretty(f, chain_params)
+            write(f, good_json(chain_params))
         end
         return samples
     end
@@ -50,5 +50,27 @@ function _uncached_sample(chain_params)
     )
 end
 
+
+
+"""
+Outputs something like:
+{
+    "a": 1,
+    "b": [ 1, 2, 3 ]
+}
+"""
+function good_json(object)
+    buffer = IOBuffer()
+    JSON3.pretty(buffer, object)
+    s = String(take!(buffer))
+
+    arrays = findall(r"\[[^\]]+\]", s)
+
+    for a in arrays[end:-1:begin]
+        compact_array = replace(s[a], r"\s+" => " ")
+        s = replace(s, s[a] => compact_array)
+    end
+    return s
+end
 
 end
