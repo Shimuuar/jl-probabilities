@@ -11,7 +11,9 @@ export
     ChainParams,
     model_from_params,
     star_magnitude,
-    T_4
+    T_4,
+    planck_formula,
+    black_body_K_rectangle
 
 @kwdef struct MeshParams
     n_discretization_points::Int = 64
@@ -22,8 +24,9 @@ end
     mesh_params::MeshParams = MeshParams()
     period::Union{Float64, Nothing}
     β::Union{Nothing, Float64}
-    σ::Union{Nothing, Float64, Vector{Float64}}
-    luminocity_function::String = "T_4"
+    fixed_σ::Union{Nothing, Float64, Vector{Float64}}
+    luminocity_function::String
+    fixed_temperature_at_bottom::Union{Nothing, Float64}
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
 end
@@ -33,11 +36,23 @@ end
     n_samples::Int
     n_chains::Int = 1
     sampler_str::String = "NUTS()"
-    init_params::Union{Nothing, Vector{Float64}} = nothing
+    init_params::Union{Nothing, NamedTuple} = nothing
 end
 
-T_4(T) = abs(T)^4
+T_4(T) = T^4
 
+function planck_formula(λ, T)
+    h = 6.62607004e-34
+    c = 299792458
+    k = 1.38064852e-23
+    return 2h*c^2 / (λ^5 * (exp(h*c / (λ*k*T)) - 1))
+end
+
+function black_body_K_rectangle(T)
+    λ = 2.2e-6
+    Δλ = 0.4e-6
+    return planck_formula(λ, T) * Δλ
+end
 
 
 
@@ -58,10 +73,15 @@ function model_from_params(model_params)
 
         mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
         observer_angle ~ Uniform(0., π)
-        temperature_at_bottom ~ FlatPos(0.)
+
+        if model_params.fixed_temperature_at_bottom === nothing
+            temperature_at_bottom ~ FlatPos(100.)
+        else
+            temperature_at_bottom = model_params.fixed_temperature_at_bottom
+        end
 
         predicted_magnitudes = star_magnitude(
-            phases,
+            phases;
             mass_quotient,
             observer_angle,
             temperature_at_bottom,
@@ -71,7 +91,19 @@ function model_from_params(model_params)
         )
 
         offset ~ Flat()
-        measurements_y .~ Normal.(predicted_magnitudes .+ offset, model_params.σ)
+        predicted_magnitudes .+= offset
+
+        if model_params.fixed_σ === nothing
+            σ ~ FlatPos(0.)
+        else
+            σ = model_params.fixed_σ
+        end
+
+        measurements_y .~ Normal.(predicted_magnitudes, σ)
+
+        # println("observer_angle: ", observer_angle)
+        # println("mass_quotient: ", mass_quotient)
+        # println("temperature_at_bottom: ", temperature_at_bottom)
     end
 
     return model(model_params.measurements_t, model_params.measurements_y)
@@ -80,7 +112,7 @@ end
 
 
 
-function star_magnitude(phases, mass_quotient, observer_angle,
+function star_magnitude(phases; mass_quotient, observer_angle,
                         temperature_at_bottom, β, interpolated_mesh,
                         luminocity_function)
 
@@ -91,7 +123,7 @@ function star_magnitude(phases, mass_quotient, observer_angle,
     ) for phase ∈ phases]
 
     function temperature(g)
-        return temperature_at_bottom * g^β
+        return temperature_at_bottom * abs(g)^β
     end
 
     mesh = interpolated_mesh(mass_quotient)
