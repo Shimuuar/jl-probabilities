@@ -6,6 +6,7 @@ using SHA
 using StructTypes
 using JSON3
 using Turing
+using Revise
 
 include("LuminocityModels.jl")
 using .LuminocityModels

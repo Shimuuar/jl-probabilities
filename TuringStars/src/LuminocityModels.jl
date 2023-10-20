@@ -1,6 +1,7 @@
 module LuminocityModels
 
 using Turing
+using Revise
 
 include("Roche.jl")
 using .Roche
@@ -25,9 +26,9 @@ end
     mesh_params::MeshParams = MeshParams()
     period::Union{Float64, Nothing}
     β::Union{Nothing, Float64}
-    fixed_σ::Union{Nothing, Float64, Vector{Float64}}
+    fixed_σ::Union{Nothing, Float64, Vector{Float64}} = nothing
     luminocity_function::String
-    fixed_temperature_at_bottom::Union{Nothing, Float64}
+    fixed_temperature_at_bottom::Union{Nothing, Float64} = nothing
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
 end
@@ -76,7 +77,7 @@ function model_from_params(model_params)
         observer_angle ~ Uniform(0., π)
 
         if model_params.fixed_temperature_at_bottom === nothing
-            temperature_at_bottom ~ FlatPos(100.)
+            temperature_at_bottom ~ FlatPos(500.)
         else
             temperature_at_bottom = model_params.fixed_temperature_at_bottom
         end
@@ -101,10 +102,6 @@ function model_from_params(model_params)
         end
 
         measurements_y .~ Normal.(predicted_magnitudes, σ)
-
-        # println("observer_angle: ", observer_angle)
-        # println("mass_quotient: ", mass_quotient)
-        # println("temperature_at_bottom: ", temperature_at_bottom)
     end
 
     return model(model_params.measurements_t, model_params.measurements_y)
