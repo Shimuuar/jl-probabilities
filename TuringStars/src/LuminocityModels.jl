@@ -15,6 +15,7 @@ export
     planck_formula,
     black_body_K_rectangle
 
+
 @kwdef struct MeshParams
     n_discretization_points::Int = 64
     mass_quotient_nodes = 0.1 : 0.1 : 10.

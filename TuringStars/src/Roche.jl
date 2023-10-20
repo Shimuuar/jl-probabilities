@@ -13,7 +13,6 @@ export
     LagrangePoint_X,
     Ω_critical,
     roche_r,
-    StretchToRocheLobe,
     make_roche_geotable,
     InterpolatedRocheMesh,
     integrate_data_over_triangular_mesh,
@@ -30,7 +29,7 @@ function Ω_potential(r::Number; mass_quotient::Number, point_on_unit_sphere::Po
         (1. + mass_quotient) / 2 * r^2 * (1. - ν^2)
 end
 
-function Ω_potential(mass_quotient, coords::Vec)
+function Ω_potential(mass_quotient, coords)
     x, y, z = coords
     r = hypot(x, y, z)
     return 1/r +
@@ -218,10 +217,6 @@ function make_roche_geotable(mass_quotient, discretization_method = RegularDiscr
         spherical_mesh,
         Dict(0 => (r = r_values,))
     )
-end
-
-function simplexify_quadrangles(mesh::SimpleMesh)
-    
 end
 
 end
