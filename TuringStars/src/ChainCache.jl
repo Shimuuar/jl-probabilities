@@ -42,8 +42,13 @@ end
 function _uncached_sample(chain_params)
     model = model_from_params(chain_params.model_params)
     sampler = eval(Meta.parse(chain_params.sampler_str))
-    syms = DynamicPPL.syms(DynamicPPL.VarInfo(model))
-    init_params_array = chain_params.init_params[syms]
+
+    if chain_params.init_params !== nothing
+        syms = DynamicPPL.syms(DynamicPPL.VarInfo(model))
+        init_params_array = chain_params.init_params[syms]
+    else
+        init_params_array = nothing
+    end
 
     return sample(
         model,
