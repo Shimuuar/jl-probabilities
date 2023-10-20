@@ -12,7 +12,8 @@ include("LuminocityModels.jl")
 using .LuminocityModels
 
 export
-    cached_sample
+    cached_sample,
+    custom_pretty_json
 
 StructTypes.StructType(::Type{MeshParams}) = StructTypes.Struct()
 StructTypes.StructType(::Type{ModelParams}) = StructTypes.Struct()
@@ -32,7 +33,7 @@ function cached_sample(chain_params, cache_dir::String="cache")
 
         description_file = joinpath(cache_dir, "parameters.json")
         open(description_file, "w") do f
-            write(f, good_json(chain_params))
+            write(f, custom_pretty_json(chain_params))
         end
         return samples
     end
@@ -64,21 +65,24 @@ end
 Outputs something like:
 {
     "a": 1,
-    "b": [ 1, 2, 3 ]
+    "b": [1, 2, 3]
 }
 """
-function good_json(object)
-    buffer = IOBuffer()
-    JSON3.pretty(buffer, object)
-    s = String(take!(buffer))
+function custom_pretty_json(object)
+    object = JSON3.read(JSON3.write(object))
 
-    arrays = findall(r"\[[^\]]+\]", s)
-
-    for a in arrays[end:-1:begin]
-        compact_array = replace(s[a], r"\s+" => " ")
-        s = replace(s, s[a] => compact_array)
+    function format_item(item, level)
+        ind = " " ^ (4 * level)
+        if isa(item, AbstractDict)
+            return "{\n" * join(["$(ind)    \"$(k)\": $(format_item(v, level + 1))" for (k, v) in item], ",\n") * "\n$(ind)}"
+        elseif isa(item, AbstractArray)
+            return "[" * join([format_item(v, level + 1) for v in item], ", ") * "]"
+        else
+            return JSON3.write(item)
+        end
     end
-    return s
+
+    return format_item(object, 0)
 end
 
 end

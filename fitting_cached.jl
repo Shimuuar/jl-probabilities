@@ -41,9 +41,6 @@ plot(
 	title = "Lomb-Scargle periodogram, сигнал K"
 )
 
-# ╔═╡ 96904af6-a825-494f-a544-741250f013b3
-LuminocityModels
-
 # ╔═╡ 5b2930bc-2de0-4388-824a-190d1169cbfe
 begin
 	estimated_period = 2findmaxperiod(pgram)[1]
@@ -153,7 +150,6 @@ end
 # ╠═b8bda58e-9ed2-4da0-a67a-6d5990e7389d
 # ╠═e28e8c98-caa0-41c0-bb15-53c6679dda6d
 # ╠═55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
-# ╠═96904af6-a825-494f-a544-741250f013b3
 # ╠═5b2930bc-2de0-4388-824a-190d1169cbfe
 # ╠═2fe448f3-1744-4bbb-83e7-290a9214e7c8
 # ╠═960ab30d-a1fa-4803-a4d4-d0860286ba87
