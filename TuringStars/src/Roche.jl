@@ -119,7 +119,7 @@ end
 function InterpolatedRocheMesh(number_of_points, mass_quotient_knots)
     sphere = Sphere((0. ,0., 0.), 1.)
     spherical_mesh = discretize(sphere, RegularDiscretization(number_of_points)) |>
-                    Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
+                    # Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
                     simplexify
     return InterpolatedRocheMesh(spherical_mesh, mass_quotient_knots)
 end

@@ -23,9 +23,6 @@ begin
 	using LombScargle
 end
 
-# ╔═╡ cb388e12-a4aa-4856-8bbf-3119dddb64f5
-LuminocityModels.bar()
-
 # ╔═╡ b8bda58e-9ed2-4da0-a67a-6d5990e7389d
 begin
 	points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
@@ -71,7 +68,7 @@ model_params = ModelParams(
 	β = 0.25,
 	fixed_σ = 0.1,
 	luminocity_function = "black_body_K_rectangle",
-	fixed_temperature_at_bottom = 5000,
+	#fixed_temperature_at_bottom = 5000,
 	measurements_t = points.day,
 	measurements_y = points.K
 )
@@ -108,14 +105,12 @@ end
 chain_params = ChainParams(
 	model_params = model_params,
 	n_samples = 10,
-	init_params = initial_params
+	init_params = initial_params,
+	sampler_str = "NUTS()"
 )
 
 # ╔═╡ a0672e16-f3b7-4bdd-927b-407cd208b49b
 samples = cached_sample(chain_params)
-
-# ╔═╡ 7ac4f925-e4d6-4d45-904d-1bc1b943c3f5
-length(samples)
 
 # ╔═╡ abaa7052-03ba-46b3-834f-38370e34ebb7
 begin
@@ -155,7 +150,6 @@ end
 
 # ╔═╡ Cell order:
 # ╠═36db1462-6dbf-11ee-38c4-05d52e2c894c
-# ╠═cb388e12-a4aa-4856-8bbf-3119dddb64f5
 # ╠═b8bda58e-9ed2-4da0-a67a-6d5990e7389d
 # ╠═e28e8c98-caa0-41c0-bb15-53c6679dda6d
 # ╠═55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
@@ -167,5 +161,4 @@ end
 # ╠═97fd2129-d706-480c-a97d-9804027d8b40
 # ╠═c88314a3-cd9e-42b2-acee-4d613b1b36e1
 # ╠═a0672e16-f3b7-4bdd-927b-407cd208b49b
-# ╠═7ac4f925-e4d6-4d45-904d-1bc1b943c3f5
 # ╠═abaa7052-03ba-46b3-834f-38370e34ebb7
