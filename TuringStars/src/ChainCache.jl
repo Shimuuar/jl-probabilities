@@ -3,21 +3,12 @@ module ChainCache
 using Serialization
 using SHA
 
-using StructTypes
 using JSON3
 using Turing
-using Revise
-
-include("LuminocityModels.jl")
-using .LuminocityModels
 
 export
     cached_sample,
     custom_pretty_json
-
-StructTypes.StructType(::Type{MeshParams}) = StructTypes.Struct()
-StructTypes.StructType(::Type{ModelParams}) = StructTypes.Struct()
-StructTypes.StructType(::Type{ChainParams}) = StructTypes.Struct()
 
 function cached_sample(chain_params, cache_dir::String="cache")
     chain_params_hash = chain_params |> JSON3.write |> sha1 |> bytes2hex
@@ -41,8 +32,8 @@ end
 
 
 function _uncached_sample(chain_params)
-    model = model_from_params(chain_params.model_params)
-    sampler = eval(Meta.parse(chain_params.sampler_str))
+    model_params = chain_params.model_params
+    model = model_params.model_function(model_params)
 
     if chain_params.init_params !== nothing
         syms = DynamicPPL.syms(DynamicPPL.VarInfo(model))
@@ -53,7 +44,7 @@ function _uncached_sample(chain_params)
 
     return sample(
         model,
-        sampler,
+        chain_params.sampler,
         chain_params.n_samples,
         init_params=init_params_array
     )

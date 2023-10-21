@@ -1,6 +1,7 @@
 module LuminocityModels
 
 using Turing
+using StructTypes
 using Revise
 
 include("Roche.jl")
@@ -10,7 +11,7 @@ export
     MeshParams,
     ModelParams,
     ChainParams,
-    model_from_params,
+    first_model,
     star_magnitude,
     T_4,
     planck_formula,
@@ -24,10 +25,11 @@ end
 
 @kwdef struct ModelParams
     mesh_params::MeshParams = MeshParams()
+    model_function::Function = first_model
     period::Union{Float64, Nothing}
     β::Union{Nothing, Float64}
     fixed_σ::Union{Nothing, Float64, Vector{Float64}} = nothing
-    luminocity_function::String
+    luminocity_function::Function = T_4
     fixed_temperature_at_bottom::Union{Nothing, Float64} = nothing
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
@@ -37,9 +39,11 @@ end
     model_params::ModelParams
     n_samples::Int
     n_chains::Int = 1
-    sampler_str::String = "NUTS()"
+    sampler::Turing.InferenceAlgorithm = NUTS()
     init_params::Union{Nothing, NamedTuple} = nothing
 end
+StructTypes.StructType(::Turing.InferenceAlgorithm) = StructTypes.StringType()
+
 
 T_4(T) = T^4
 
@@ -57,8 +61,11 @@ function black_body_K_rectangle(T)
 end
 
 
+StructTypes.StructType(::typeof(T_4)) = StructTypes.StringType()
+StructTypes.StructType(::typeof(black_body_K_rectangle)) = StructTypes.StringType()
 
-function model_from_params(model_params)
+
+function first_model(model_params)
     interpolated_mesh = InterpolatedRocheMesh(
         model_params.mesh_params.n_discretization_points,
         model_params.mesh_params.mass_quotient_nodes
@@ -66,7 +73,6 @@ function model_from_params(model_params)
 
     mass_quotient_min = model_params.mesh_params.mass_quotient_nodes[1]
     mass_quotient_max = model_params.mesh_params.mass_quotient_nodes[end]
-    luminocity_function = eval(Meta.parse(model_params.luminocity_function))
 
 
     @model function model(measurements_t, measurements_y)
@@ -89,7 +95,7 @@ function model_from_params(model_params)
             temperature_at_bottom,
             model_params.β,
             interpolated_mesh,
-            luminocity_function
+            model_params.luminocity_function
         )
 
         offset ~ Flat()
@@ -107,6 +113,7 @@ function model_from_params(model_params)
     return model(model_params.measurements_t, model_params.measurements_y)
 end
 
+StructTypes.StructType(::typeof(first_model)) = StructTypes.StringType()
 
 
 

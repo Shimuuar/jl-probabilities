@@ -15,6 +15,8 @@ begin
 	using DelimitedFiles
 	using DataFrames
 
+	using Turing
+
 	using Plots
 	using StatsPlots
 	plotlyjs()
@@ -64,8 +66,7 @@ model_params = ModelParams(
 	period = estimated_period,
 	β = 0.25,
 	fixed_σ = 0.1,
-	luminocity_function = "black_body_K_rectangle",
-	#fixed_temperature_at_bottom = 5000,
+	luminocity_function = black_body_K_rectangle,
 	measurements_t = points.day,
 	measurements_y = points.K
 )
@@ -90,8 +91,8 @@ begin
 		phases;
 		initial_params[(:mass_quotient, :observer_angle, :temperature_at_bottom)]...,
 		interpolated_mesh,
-		β = 0.25,
-		luminocity_function = eval(Meta.parse(model_params.luminocity_function))
+		β = model_params.β,
+		luminocity_function = model_params.luminocity_function
 	)
 
 	vals .+= initial_params.offset
@@ -104,7 +105,7 @@ chain_params = ChainParams(
 	model_params = model_params,
 	n_samples = 10,
 	init_params = initial_params,
-	sampler_str = "NUTS()"
+	sampler = NUTS()
 )
 
 # ╔═╡ a0672e16-f3b7-4bdd-927b-407cd208b49b
@@ -138,7 +139,7 @@ begin
 			),
 			β = model_params.β,
 			interpolated_mesh,
-			luminocity_function = eval(Meta.parse(model_params.luminocity_function))
+			luminocity_function = model_params.luminocity_function
 		)
 
 		vals .+= samples[i][:offset].data[1]
