@@ -79,7 +79,8 @@ begin
 		markersize = 2,
 		xlabel = "Julian day % period",
 		ylabel = "Звёздная величина",
-		title = "K"
+		title = "K",
+		yflip = true
 	)
 
 	local days = 0:estimated_period
@@ -118,7 +119,8 @@ begin
 		markersize = 2,
 		xlabel = "Julian day % period",
 		ylabel = "Звёздная величина",
-		title = "K"
+		title = "K",
+		yflip = true
 	)
 
 	local days = 0 : estimated_period
