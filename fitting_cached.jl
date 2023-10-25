@@ -55,10 +55,10 @@ interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
 # ╔═╡ 960ab30d-a1fa-4803-a4d4-d0860286ba87
 initial_params = (;
 	mass_quotient = 0.5,
-	initial_phase = 0.8,
+	initial_phase = 0.77,
 	observer_angle = π/2,
 	temperature_at_bottom = 5000,
-	offset = 18.1 # 41.4
+	offset = 18.14 # 41.4, 18.14, 18.1
 )
 
 # ╔═╡ 97fd2129-d706-480c-a97d-9804027d8b40
@@ -66,7 +66,7 @@ model_params = ModelParams(
 	period = estimated_period,
 	β = 0.25,
 	fixed_σ = 0.1,
-	luminocity_function = black_body_K_rectangle,
+	luminocity_function = black_body_K,
 	measurements_t = points.day,
 	measurements_y = points.K
 )
@@ -108,10 +108,10 @@ chain_params = ChainParams(
 	sampler = NUTS()
 )
 
-# ╔═╡ a0672e16-f3b7-4bdd-927b-407cd208b49b
+# ╔═╡ eda9134f-b918-42f0-bcfc-e0d601eeeaad
 samples = cached_sample(chain_params)
 
-# ╔═╡ abaa7052-03ba-46b3-834f-38370e34ebb7
+# ╔═╡ 174cd8b8-1d1c-4141-a170-6f978f5195e1
 begin
 	scatter(
 		points.day .% estimated_period,
@@ -159,5 +159,5 @@ end
 # ╠═00044db4-b168-44be-9d39-87d27b7d330d
 # ╠═97fd2129-d706-480c-a97d-9804027d8b40
 # ╠═c88314a3-cd9e-42b2-acee-4d613b1b36e1
-# ╠═a0672e16-f3b7-4bdd-927b-407cd208b49b
-# ╠═abaa7052-03ba-46b3-834f-38370e34ebb7
+# ╠═eda9134f-b918-42f0-bcfc-e0d601eeeaad
+# ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1

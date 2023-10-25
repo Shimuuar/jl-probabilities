@@ -22,6 +22,8 @@ begin
 
 	import Makie
 	import WGLMakie
+
+	using BenchmarkTools
 end
 
 # ╔═╡ 243eae5b-8f0a-4246-8f2e-3de35bb3941a
@@ -86,7 +88,12 @@ begin
 	plot!(
 		phases,
 		star_magnitude(phases; params..., luminocity_function = black_body_K_rectangle),
-		label = "planck(T) * width"
+		label = "planck(λ, T) * width"
+	)
+	plot!(
+		phases,
+		star_magnitude(phases; params..., luminocity_function = black_body_K) .+ 0.02,
+		label = "∫planck(λ, T) dλ"
 	)
 	plot!(
 		phases,
@@ -122,8 +129,27 @@ begin
 	plot!()
 end
 
-# ╔═╡ f17ee0d2-95dc-4662-8ce9-904c5ef56b1f
+# ╔═╡ ae5f7182-0a38-4178-bf15-a7307876826e
+temperature_nodes = 0 : 100 : 50_000
 
+# ╔═╡ 8b8880ed-eec4-4ae3-8055-5b899915dff7
+begin
+	plot(title = "Зависимость светимости от температуры", xlabel = "T", ylabel = "L", legend = :bottomright)
+	plot!(temperature_nodes, black_body_K_rectangle.(temperature_nodes), label = "planck(λ, T) * width")
+	plot!(temperature_nodes, black_body_K.(temperature_nodes), label = "∫planck(λ, T) dλ")
+end
+
+# ╔═╡ 3135d232-11de-4c60-857e-6683f2af7767
+temperature_nodes2 = 500 : 50_000
+
+# ╔═╡ 2fcf163b-cd98-4d03-9627-17d2026232ed
+@btime  black_body_K.(temperature_nodes2)
+
+# ╔═╡ 41ec6dfd-51bd-4406-9250-4bcbdaf6d7ec
+@btime black_body_K_rectangle.(temperature_nodes2)
+
+# ╔═╡ f884d84b-8d79-4f96-b862-f8412ef84140
+@btime _black_body_K.(temperature_nodes2)
 
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
@@ -139,4 +165,9 @@ end
 # ╠═08d08b9d-f632-49f6-8df6-c39d35b7dc27
 # ╠═11872494-739a-4ada-8572-733d1756b6a5
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
-# ╠═f17ee0d2-95dc-4662-8ce9-904c5ef56b1f
+# ╠═ae5f7182-0a38-4178-bf15-a7307876826e
+# ╠═8b8880ed-eec4-4ae3-8055-5b899915dff7
+# ╠═3135d232-11de-4c60-857e-6683f2af7767
+# ╠═2fcf163b-cd98-4d03-9627-17d2026232ed
+# ╠═41ec6dfd-51bd-4406-9250-4bcbdaf6d7ec
+# ╠═f884d84b-8d79-4f96-b862-f8412ef84140

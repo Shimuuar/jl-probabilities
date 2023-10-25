@@ -3,10 +3,12 @@ module TuringStars
 using Reexport
 using Revise
 
-include("LuminocityModels.jl")
+include("LuminocityFunctions.jl")
 include("Roche.jl")
 include("ChainCache.jl")
+include("LuminocityModels.jl")
 
+@reexport using .LuminocityFunctions
 @reexport using .Roche
 @reexport using .LuminocityModels
 @reexport using .ChainCache

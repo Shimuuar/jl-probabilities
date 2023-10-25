@@ -5,17 +5,17 @@ using StructTypes
 using Revise
 
 include("Roche.jl")
+include("LuminocityFunctions.jl")
+
 using .Roche
+using .LuminocityFunctions
 
 export
     MeshParams,
     ModelParams,
     ChainParams,
     first_model,
-    star_magnitude,
-    T_4,
-    planck_formula,
-    black_body_K_rectangle
+    star_magnitude
 
 
 @kwdef struct MeshParams
@@ -29,8 +29,9 @@ end
     period::Union{Float64, Nothing}
     β::Union{Nothing, Float64}
     fixed_σ::Union{Nothing, Float64, Vector{Float64}} = nothing
-    luminocity_function::Function = T_4
+    luminocity_function = T_4
     fixed_temperature_at_bottom::Union{Nothing, Float64} = nothing
+    temperature_limits::Union{Nothing, Tuple{Float64, Float64}} = (500., 50_000.)
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
 end
@@ -44,25 +45,6 @@ end
 end
 StructTypes.StructType(::Turing.InferenceAlgorithm) = StructTypes.StringType()
 
-
-T_4(T) = T^4
-
-function planck_formula(λ, T)
-    h = 6.62607004e-34
-    c = 299792458
-    k = 1.38064852e-23
-    return 2h*c^2 / (λ^5 * (exp(h*c / (λ*k*T)) - 1))
-end
-
-function black_body_K_rectangle(T)
-    λ = 2.2e-6
-    Δλ = 0.4e-6
-    return planck_formula(λ, T) * Δλ
-end
-
-
-StructTypes.StructType(::typeof(T_4)) = StructTypes.StringType()
-StructTypes.StructType(::typeof(black_body_K_rectangle)) = StructTypes.StringType()
 
 
 function first_model(model_params)
@@ -82,10 +64,12 @@ function first_model(model_params)
         mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
         observer_angle ~ Uniform(0., π)
 
-        if model_params.fixed_temperature_at_bottom === nothing
-            temperature_at_bottom ~ FlatPos(500.)
-        else
+        if model_params.fixed_temperature_at_bottom !== nothing
             temperature_at_bottom = model_params.fixed_temperature_at_bottom
+        elseif model_params.temperature_limits !== nothing
+            temperature_at_bottom ~ Uniform(model_params.temperature_limits...)
+        else
+            temperature_at_bottom ~ FlatPos(500.)
         end
 
         predicted_magnitudes = star_magnitude(
