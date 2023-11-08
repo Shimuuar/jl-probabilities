@@ -152,7 +152,8 @@ end
 
 # Functions related to integration
 
-function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, normals, areas)
+function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, normals, areas,
+                                  darkening_function, darkening_coefficients)
     vertices_values = getfield(values(geo_table, 0), field_name)
 
     connections = faces(topology(domain(geo_table)), 2)
@@ -163,7 +164,8 @@ function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, no
             return zero(cosine)
         else
             val = avg_over_face(vertices_values, connection)
-            return cosine * A * val
+            darkening = darkening_function(cosine, darkening_coefficients...)
+            return cosine * A * val * darkening
         end
     end
 end

@@ -60,8 +60,8 @@ initial_params = (;
 	mass_quotient = 0.5,
 	initial_phase = 0.77,
 	observer_angle = π/2,
-	temperature_at_bottom = 5000,
-	offset = 18.14 # 41.4, 18.14, 18.1
+	temperature_at_bottom = 3500,
+	offset = 17.25 # 17.17
 )
 
 # ╔═╡ 97fd2129-d706-480c-a97d-9804027d8b40
@@ -70,6 +70,9 @@ model_params = ModelParams(
 	β = 0.25,
 	fixed_σ = 0.1,
 	luminocity_function = black_body_K,
+	fixed_temperature_at_bottom = initial_params.temperature_at_bottom,
+	darkening_function = claret_darkening,
+	darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
 	measurements_t = points.day,
 	measurements_y = points.K
 )
@@ -95,7 +98,9 @@ begin
 		initial_params[(:mass_quotient, :observer_angle, :temperature_at_bottom)]...,
 		interpolated_mesh,
 		β = model_params.β,
-		luminocity_function = model_params.luminocity_function
+		luminocity_function = model_params.luminocity_function,
+		darkening_function = model_params.darkening_function,
+		darkening_coefficients = model_params.darkening_coefficients
 	)
 
 	vals .+= initial_params.offset
@@ -147,7 +152,9 @@ begin
 			),
 			β = model_params.β,
 			interpolated_mesh,
-			luminocity_function = model_params.luminocity_function
+			luminocity_function = model_params.luminocity_function,
+			darkening_function = model_params.darkening_function,
+			darkening_coefficients = model_params.darkening_coefficients
 		)
 
 		vals .+= samples_[i][:offset].data[1]

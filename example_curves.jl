@@ -89,7 +89,9 @@ params = (;
 	temperature_at_bottom = 5000,
 	β = 0.25,
 	interpolated_mesh,
-	luminocity_function = T_4
+	luminocity_function = black_body_K,
+    darkening_function = claret_darkening,
+    darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272)
 )
 
 # ╔═╡ 08d08b9d-f632-49f6-8df6-c39d35b7dc27
@@ -107,7 +109,7 @@ begin
 	)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = T_4) .+ 23.266,
+		star_magnitude(phases; params..., luminocity_function = T_4) .+ 23.256,
 		label = "T^4"
 	)
 	
@@ -133,7 +135,7 @@ end
 
 # ╔═╡ 11872494-739a-4ada-8572-733d1756b6a5
 begin
-	plot(title = "При разном соотношении масс; L = T^4", xlabel = "phase", ylabel = "m", yflip = true)
+	plot(title = "При разном соотношении масс", xlabel = "phase", ylabel = "m", yflip = true)
 	for q ∈ [0.1, 0.2, 0.4, 0.8, 1.6, 3.2]
 		plot!(
 			phases,
@@ -146,7 +148,7 @@ end
 
 # ╔═╡ 41327e56-5682-438b-bb91-a7acc918d589
 begin
-	plot(title = "При разном наклонении; L = T^4", xlabel = "phase", ylabel = "m", yflip = true)
+	plot(title = "При разном наклонении", xlabel = "phase", ylabel = "m", yflip = true)
 	for i ∈ [0., π/6, π/4, π/3, π/2]
 		plot!(
 			phases,
@@ -167,11 +169,31 @@ begin
 	plot!(temperature_nodes, black_body_K.(temperature_nodes), label = "∫planck(λ, T) dλ")
 end
 
-# ╔═╡ d454dead-adee-458b-8ed3-88e400787bcc
-t = 2000 : 4000
+# ╔═╡ 5b03df78-85f1-4f54-b814-9658f4666779
+darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272)
 
-# ╔═╡ e4acb0d5-b771-4850-b41a-6747ba3f3042
-	plot(t, black_body_K.(t) ./ black_body_K_rectangle.(t).-1)
+# ╔═╡ e1cb3cb6-532d-43f8-beaa-646f8c1264fa
+begin
+	local θ = 0 : 0.01 : π/2
+	local cosines = cos.(θ)
+	plot(θ, claret_darkening.(cosines, darkening_coefficients...), xlabel = "θ", title = "Коэффициент потемнения к краю")
+end
+
+# ╔═╡ 4b1e0d61-d58a-4e64-a120-1da21c8ece50
+begin
+	plot(title = "С потемнением к краю и без", xlabel = "phase", ylabel = "m", yflip = true)
+	plot!(
+		phases,
+		star_magnitude(phases; params..., darkening_function = one, darkening_coefficients = ()),
+		label = "Без потемнения к краю"
+	)
+	plot!(
+		phases,
+		star_magnitude(phases; params...) .- 0.114 ,
+		label = "С потемнением"
+	)
+	plot!(legend = :bottomright)
+end
 
 # ╔═╡ 6fbfd8b0-19bc-417f-8fb8-9345086685f3
 md"### Скорость интегрирования с кешированием нормалей"
@@ -185,16 +207,14 @@ d = (1/√2, 1/√2, 0.)
 
 # ╔═╡ 8f019dcc-fff8-4a7f-a15c-d5e5d507656f
 # С предварительно вычисленными нормалями
-@btime integrate_data_over_mesh(mesh, :g, d, normals, areas)
+@btime integrate_data_over_mesh(mesh, :g, d, normals, areas, c -> 1., ())
 
-# ╔═╡ 1cb5cad4-4708-447d-bdec-52bce18c8373
-typeof(mesh)
-
-# ╔═╡ e6b3fd40-0279-48fc-bd4e-21b91e2d69f5
-typeof(getfield(mesh, :values))
+# ╔═╡ 16bbab2a-43ff-432a-af10-d83ac1a7aa4b
+# С предварительно вычисленными нормалями и учетом потемнения к краю
+@btime integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, darkening_coefficients)
 
 # ╔═╡ c6c9f467-d821-47e2-b2a1-fedfdb685880
-@code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas)
+@code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, darkening_coefficients)
 
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
@@ -207,19 +227,19 @@ typeof(getfield(mesh, :values))
 # ╠═28452494-35d6-443a-8986-8c41cdc239de
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
-# ╟─424af3e5-703b-46a1-be45-e87f78714517
+# ╠═424af3e5-703b-46a1-be45-e87f78714517
 # ╠═08d08b9d-f632-49f6-8df6-c39d35b7dc27
 # ╠═878919d1-66ad-4ff4-9832-2fbb197ac01f
 # ╠═11872494-739a-4ada-8572-733d1756b6a5
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
 # ╠═ae5f7182-0a38-4178-bf15-a7307876826e
 # ╠═8b8880ed-eec4-4ae3-8055-5b899915dff7
-# ╠═d454dead-adee-458b-8ed3-88e400787bcc
-# ╠═e4acb0d5-b771-4850-b41a-6747ba3f3042
+# ╠═5b03df78-85f1-4f54-b814-9658f4666779
+# ╠═e1cb3cb6-532d-43f8-beaa-646f8c1264fa
+# ╠═4b1e0d61-d58a-4e64-a120-1da21c8ece50
 # ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
 # ╠═f457d950-a90f-4726-b132-f5f6ceaee8e3
 # ╠═9ec17918-f502-435e-ac1a-d7534c9362f3
 # ╠═8f019dcc-fff8-4a7f-a15c-d5e5d507656f
-# ╠═1cb5cad4-4708-447d-bdec-52bce18c8373
-# ╠═e6b3fd40-0279-48fc-bd4e-21b91e2d69f5
+# ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
 # ╠═c6c9f467-d821-47e2-b2a1-fedfdb685880

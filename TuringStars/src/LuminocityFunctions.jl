@@ -9,7 +9,8 @@ export
     planck_formula,
     black_body_K_rectangle,
     black_body_K,
-    _black_body_K
+    _black_body_K,
+    claret_darkening
 
 T_4(T) = T^4
 
@@ -59,5 +60,14 @@ end
 StructTypes.StructType(::typeof(T_4)) = StructTypes.StringType()
 StructTypes.StructType(::typeof(black_body_K_rectangle)) = StructTypes.StringType()
 StructTypes.StructType(::typeof(black_body_K)) = StructTypes.StringType()
+
+
+function claret_darkening(cosine, a1, a2, a3, a4)
+    μ = cosine
+    1. - a1 * (1 - √μ) - a2 * (1 - μ) - a3 * (1 - μ^1.5) - a4 * (1 - μ^2)
+end
+
+StructTypes.StructType(::typeof(claret_darkening)) = StructTypes.StringType()
+StructTypes.StructType(::typeof(one)) = StructTypes.StringType()
 
 end

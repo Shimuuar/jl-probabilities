@@ -33,6 +33,8 @@ end
     luminocity_function = T_4
     fixed_temperature_at_bottom::Union{Nothing, Float64} = nothing
     temperature_limits::Union{Nothing, Tuple{Float64, Float64}} = (500., 50_000.)
+    darkening_function = one
+    darkening_coefficients = ()
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
 end
@@ -80,7 +82,9 @@ function first_model(model_params)
             temperature_at_bottom,
             model_params.β,
             interpolated_mesh,
-            model_params.luminocity_function
+            model_params.luminocity_function,
+            model_params.darkening_function,
+            model_params.darkening_coefficients
         )
 
         offset ~ Flat()
@@ -104,7 +108,7 @@ StructTypes.StructType(::typeof(first_model)) = StructTypes.StringType()
 
 function star_magnitude(phases; mass_quotient, observer_angle,
                         temperature_at_bottom, β, interpolated_mesh,
-                        luminocity_function)
+                        luminocity_function, darkening_function, darkening_coefficients)
 
     directions = [(
         sin(observer_angle) * cos(phase),
@@ -124,7 +128,7 @@ function star_magnitude(phases; mass_quotient, observer_angle,
     areas = calc_function_on_faces(mesh, area)
 
     luminocities = [
-        integrate_data_over_mesh(mesh, :L, direction, normals, areas)
+        integrate_data_over_mesh(mesh, :L, direction, normals, areas, darkening_function, darkening_coefficients)
         for direction ∈ directions
     ]
     return @. -2.5 * log10(luminocities)
