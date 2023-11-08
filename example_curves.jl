@@ -62,8 +62,18 @@ end
 
 # ╔═╡ 3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
 begin
-	local m = interpolated_mesh(1)
+	local m = interpolated_mesh(1.)
 	f = viz(domain(m), color = values(m, 0).g)
+end
+
+# ╔═╡ 28452494-35d6-443a-8986-8c41cdc239de
+begin
+	mesh = interpolated_mesh(1)
+	mesh = apply_function(mesh, g -> g^0.25, :g, :T)
+	mesh = apply_function(mesh, T -> T^4, :T, :L)
+
+	normals = calc_function_on_faces(mesh, normal)
+    areas = calc_function_on_faces(mesh, area)
 end
 
 # ╔═╡ 1f6a872e-5411-47e7-a642-97e9180af6c7
@@ -99,6 +109,24 @@ begin
 		phases,
 		star_magnitude(phases; params..., luminocity_function = T_4) .+ 23.266,
 		label = "T^4"
+	)
+	
+end
+
+# ╔═╡ 878919d1-66ad-4ff4-9832-2fbb197ac01f
+begin
+	plot( xlabel = "phase", ylabel = "m", yflip = true)
+	plot!(
+		phases,
+		star_magnitude(phases; params..., luminocity_function = black_body_K, temperature_at_bottom = 2000),
+	)
+	plot!(
+		phases,
+		star_magnitude(phases; params..., luminocity_function = black_body_K, temperature_at_bottom = 3000) .+ 1.22,
+	)
+	plot!(
+		phases,
+		star_magnitude(phases; params..., luminocity_function = black_body_K, temperature_at_bottom = 4000) .+ 1.89,
 	)
 	
 end
@@ -139,17 +167,34 @@ begin
 	plot!(temperature_nodes, black_body_K.(temperature_nodes), label = "∫planck(λ, T) dλ")
 end
 
-# ╔═╡ 3135d232-11de-4c60-857e-6683f2af7767
-temperature_nodes2 = 500 : 50_000
+# ╔═╡ d454dead-adee-458b-8ed3-88e400787bcc
+t = 2000 : 4000
 
-# ╔═╡ 2fcf163b-cd98-4d03-9627-17d2026232ed
-@btime  black_body_K.(temperature_nodes2)
+# ╔═╡ e4acb0d5-b771-4850-b41a-6747ba3f3042
+	plot(t, black_body_K.(t) ./ black_body_K_rectangle.(t).-1)
 
-# ╔═╡ 41ec6dfd-51bd-4406-9250-4bcbdaf6d7ec
-@btime black_body_K_rectangle.(temperature_nodes2)
+# ╔═╡ 6fbfd8b0-19bc-417f-8fb8-9345086685f3
+md"### Скорость интегрирования с кешированием нормалей"
 
-# ╔═╡ f884d84b-8d79-4f96-b862-f8412ef84140
-@btime _black_body_K.(temperature_nodes2)
+# ╔═╡ f457d950-a90f-4726-b132-f5f6ceaee8e3
+d = (1/√2, 1/√2, 0.)
+
+# ╔═╡ 9ec17918-f502-435e-ac1a-d7534c9362f3
+# Без предварительно вычисленных нормалей
+@btime integrate_data_over_triangular_mesh(mesh, :g, d)
+
+# ╔═╡ 8f019dcc-fff8-4a7f-a15c-d5e5d507656f
+# С предварительно вычисленными нормалями
+@btime integrate_data_over_mesh(mesh, :g, d, normals, areas)
+
+# ╔═╡ 1cb5cad4-4708-447d-bdec-52bce18c8373
+typeof(mesh)
+
+# ╔═╡ e6b3fd40-0279-48fc-bd4e-21b91e2d69f5
+typeof(getfield(mesh, :values))
+
+# ╔═╡ c6c9f467-d821-47e2-b2a1-fedfdb685880
+@code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas)
 
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
@@ -159,15 +204,22 @@ temperature_nodes2 = 500 : 50_000
 # ╠═87a082a1-4e29-4702-acb0-35afc8e51735
 # ╠═c72dec8c-9841-45af-bb0f-c0818102fe4f
 # ╠═3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
+# ╠═28452494-35d6-443a-8986-8c41cdc239de
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
-# ╠═424af3e5-703b-46a1-be45-e87f78714517
+# ╟─424af3e5-703b-46a1-be45-e87f78714517
 # ╠═08d08b9d-f632-49f6-8df6-c39d35b7dc27
+# ╠═878919d1-66ad-4ff4-9832-2fbb197ac01f
 # ╠═11872494-739a-4ada-8572-733d1756b6a5
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
 # ╠═ae5f7182-0a38-4178-bf15-a7307876826e
 # ╠═8b8880ed-eec4-4ae3-8055-5b899915dff7
-# ╠═3135d232-11de-4c60-857e-6683f2af7767
-# ╠═2fcf163b-cd98-4d03-9627-17d2026232ed
-# ╠═41ec6dfd-51bd-4406-9250-4bcbdaf6d7ec
-# ╠═f884d84b-8d79-4f96-b862-f8412ef84140
+# ╠═d454dead-adee-458b-8ed3-88e400787bcc
+# ╠═e4acb0d5-b771-4850-b41a-6747ba3f3042
+# ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
+# ╠═f457d950-a90f-4726-b132-f5f6ceaee8e3
+# ╠═9ec17918-f502-435e-ac1a-d7534c9362f3
+# ╠═8f019dcc-fff8-4a7f-a15c-d5e5d507656f
+# ╠═1cb5cad4-4708-447d-bdec-52bce18c8373
+# ╠═e6b3fd40-0279-48fc-bd4e-21b91e2d69f5
+# ╠═c6c9f467-d821-47e2-b2a1-fedfdb685880

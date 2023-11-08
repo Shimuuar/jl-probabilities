@@ -7,11 +7,6 @@ begin
 
     using Turing
 
-    using Plots
-    using StatsPlots
-    plotlyjs()
-    theme(:juno)
-
     using LombScargle
 
     using Profile
@@ -50,8 +45,6 @@ chain_params = ChainParams(
 	init_params = initial_params,
 	sampler = NUTS()
 )
-
-
 
 
 @profview samples = TuringStars.ChainCache._uncached_sample(chain_params)

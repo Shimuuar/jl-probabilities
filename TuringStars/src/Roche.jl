@@ -16,8 +16,10 @@ export
     make_roche_geotable,
     InterpolatedRocheMesh,
     integrate_data_over_triangular_mesh,
-    apply_radial_function,
+    integrate_data_over_mesh,
+    integrate_data_over_mesh2,
     apply_function,
+    calc_function_on_faces,
     luminocity_at_point
 
 
@@ -142,13 +144,29 @@ function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
     )
     return GeoTable(
         new_mesh,
-        Dict(0 => (r = r_list, g = g_list,))
+        Dict(0 => (g = g_list,))
     )
 end
 
 
 
 # Functions related to integration
+
+function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, normals, areas)
+    vertices_values = getfield(values(geo_table, 0), field_name)
+
+    connections = faces(topology(domain(geo_table)), 2)
+
+    sum(zip(connections, normals, areas)) do (connection, n, A)
+        cosine = n ⋅ direction
+        if cosine < 0
+            return zero(cosine)
+        else
+            val = avg_over_face(vertices_values, connection)
+            return cosine * A * val
+        end
+    end
+end
 
 
 function integrate_data_over_triangular_mesh(geo_table::GeoTable, field_name, direction)
@@ -178,45 +196,20 @@ function avg_over_face(vertices_values, connection)
 end
 
 
-function apply_radial_function(geo_table::GeoTable, f, field_name)
-    r_list = values(geo_table, 0).r
-    f_list = f.(r_list)
 
-    return GeoTable(
-        domain(geo_table),
-        Dict(0 => (r = r_list, field_name => f_list,))
-    ) 
-end
+function apply_function(geo_table::GeoTable, f, arg_field_name, result_field_name, dim=0)
+    data = getfield(geo_table, :values)
 
-function apply_function(geo_table::GeoTable, f, arg_field_name, result_field_name)
-    data = values(geo_table, 0)
-    f_list = f.(data[arg_field_name])
+    f_list = f.(getfield(data[dim], arg_field_name))
 
-    return GeoTable(
-        domain(geo_table),
-        Dict(0 => merge(data, (result_field_name => f_list,)))
-    )
+    data = merge(merge, data, Dict(dim => (result_field_name => f_list,)))
+
+    return GeoTable(domain(geo_table), data)
 end
 
 
-
-
-
-
-# Для создания сетки один раз
-
-function make_roche_geotable(mass_quotient, discretization_method = RegularDiscretization(10))
-    sphere = Sphere((0. ,0., 0.), 1.)
-    spherical_mesh = discretize(sphere, discretization_method) |>
-                    Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
-                    simplexify
-    lagrange1_x = LagrangePoint_X(mass_quotient)
-    Ω0 = Ω_critical(lagrange1_x, mass_quotient)
-    r_values = roche_r.(Ω0, lagrange1_x, mass_quotient, vertices(spherical_mesh))
-    return GeoTable(
-        spherical_mesh,
-        Dict(0 => (r = r_values,))
-    )
+function calc_function_on_faces(geo_table::GeoTable, f, dim=2)
+    f.(faces(domain(geo_table), dim))
 end
 
 end

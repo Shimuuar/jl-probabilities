@@ -2,6 +2,7 @@ module LuminocityModels
 
 using Turing
 using StructTypes
+using Meshes
 using Revise
 
 include("Roche.jl")
@@ -119,8 +120,11 @@ function star_magnitude(phases; mass_quotient, observer_angle,
     mesh = apply_function(mesh, temperature, :g, :T)
     mesh = apply_function(mesh, luminocity_function, :T, :L)
 
+    normals = calc_function_on_faces(mesh, normal)
+    areas = calc_function_on_faces(mesh, area)
+
     luminocities = [
-        integrate_data_over_triangular_mesh(mesh, :L, direction)
+        integrate_data_over_mesh(mesh, :L, direction, normals, areas)
         for direction ∈ directions
     ]
     return @. -2.5 * log10(luminocities)

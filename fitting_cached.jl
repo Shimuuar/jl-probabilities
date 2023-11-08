@@ -25,6 +25,9 @@ begin
 	using LombScargle
 end
 
+# ╔═╡ 33b862f3-dc6a-46fe-b73e-a7df7af22e92
+using JSON3, SHA
+
 # ╔═╡ b8bda58e-9ed2-4da0-a67a-6d5990e7389d
 begin
 	points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
@@ -111,6 +114,9 @@ chain_params = ChainParams(
 # ╔═╡ eda9134f-b918-42f0-bcfc-e0d601eeeaad
 samples = cached_sample(chain_params)
 
+# ╔═╡ a5070b94-48c2-4405-af78-fddd5784161e
+chain_params |> JSON3.write |> sha1 |> bytes2hex
+
 # ╔═╡ 174cd8b8-1d1c-4141-a170-6f978f5195e1
 begin
 	scatter(
@@ -126,27 +132,32 @@ begin
 
 	local days = 0 : estimated_period
 	local phases = @. initial_params.initial_phase + days / estimated_period * 2π
+
+	samples_ = sample(samples, 15)
 	
-	for i in 1 : length(samples)
+	for i in 1 : length(samples_)
 	
 		local vals = star_magnitude(
 			phases;
-			mass_quotient = samples[i][:mass_quotient].data[1],
-			observer_angle = samples[i][:observer_angle].data[1],
+			mass_quotient = samples_[i][:mass_quotient].data[1],
+			observer_angle = samples_[i][:observer_angle].data[1],
 			temperature_at_bottom = @something(
 				model_params.fixed_temperature_at_bottom,
-				samples[i][:temperature_at_bottom].data[1]
+				samples_[i][:temperature_at_bottom].data[1]
 			),
 			β = model_params.β,
 			interpolated_mesh,
 			luminocity_function = model_params.luminocity_function
 		)
 
-		vals .+= samples[i][:offset].data[1]
+		vals .+= samples_[i][:offset].data[1]
 		plot!(days, vals)
 	end
 	plot!()
 end
+
+# ╔═╡ 45422b39-64d5-4a75-b8c0-8ba0011ba089
+plot(samples, bottom_margin = 50Plots.px)
 
 # ╔═╡ Cell order:
 # ╠═36db1462-6dbf-11ee-38c4-05d52e2c894c
@@ -160,4 +171,7 @@ end
 # ╠═97fd2129-d706-480c-a97d-9804027d8b40
 # ╠═c88314a3-cd9e-42b2-acee-4d613b1b36e1
 # ╠═eda9134f-b918-42f0-bcfc-e0d601eeeaad
+# ╠═33b862f3-dc6a-46fe-b73e-a7df7af22e92
+# ╠═a5070b94-48c2-4405-af78-fddd5784161e
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
+# ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
