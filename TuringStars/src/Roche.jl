@@ -23,7 +23,9 @@ export
     luminocity_at_point
 
 
-
+"""
+Формула 6.1 Черепащука (стр 88)
+"""
 function Ω_potential(r::Number; mass_quotient::Number, point_on_unit_sphere::Point)
     λ, μ, ν = coordinates(point_on_unit_sphere)
     return 1/r +
@@ -31,6 +33,13 @@ function Ω_potential(r::Number; mass_quotient::Number, point_on_unit_sphere::Po
         (1. + mass_quotient) / 2 * r^2 * (1. - ν^2)
 end
 
+
+
+"""
+Переделанная формула 6.1 Черепащука, выраженная через x,y,z вместо r,λ,μ,ν
+
+Нужна для вычисления градиента
+"""
 function Ω_potential(mass_quotient, coords)
     x, y, z = coords
     r = hypot(x, y, z)
@@ -47,6 +56,14 @@ function Ω_grad(mass_quotient, coords::Vec)
 end
 
 
+
+"""
+Ищем точку Лагранжа по оси X, соединяющей две звезды.
+
+Для этого приравниваем ∂Ω/∂x к нулю и ищем корень на отрезке (0, 1).
+
+Формула для производной — 6.2 Черепащука (стр 88)
+"""
 function LagrangePoint_X(mass_quotient)
     function Ω_x_derivative(x)
         -1 / x^2 - 
@@ -56,10 +73,22 @@ function LagrangePoint_X(mass_quotient)
     return find_zero(Ω_x_derivative, (0., 1.))
 end
 
+
+
+"""
+Значение Ω-потенциала в точке Лагранжа (и вообще в любой точке на поверхности полости Роша)
+"""
 function Ω_critical(lagrange1_x, mass_quotient)
     return Ω_potential(lagrange1_x; mass_quotient, point_on_unit_sphere=Point(1., 0., 0.))
 end
 
+
+
+"""
+Радиус полости Роша вдоль направления `point_on_unit_sphere`.
+
+Численно решаем уравнение f(r) = Ω(r, λ, μ, ν) - Ω0 = 0, где Ω0 — значение Ω-потенциала в точке Лагранжа.
+"""
 function roche_r(Ω0, lagrange1_x, mass_quotient, point_on_unit_sphere::Point)
     function Ω_partially_applied(r)
         return Ω_potential(r; mass_quotient, point_on_unit_sphere) - Ω0
@@ -76,6 +105,11 @@ end
 
 # Functions related to interpolation
 
+"""
+Интерполированная по соотношению масс сетка полости Роша.
+
+Для InterpolatedRocheMesh переопределен оператор вызова функции. Если применить её к соотношению масс, то получится Meshes.GeoTable, содержащая сетку полости Роша при данном соотношении масс и значения |g| в каждой точке, нормированные на значение |g| в точке (x, y, z) = (-1, 0, 0).
+"""
 struct InterpolatedRocheMesh
     spherical_mesh
     mass_quotient_knots
@@ -84,6 +118,10 @@ struct InterpolatedRocheMesh
 end
 
 
+
+"""
+Конструктор InterpolatedRocheMesh, если уже построена сферическая сетка.
+"""
 function InterpolatedRocheMesh(spherical_mesh::SimpleMesh, mass_quotient_knots)
 
     r_values = zeros(nvertices(spherical_mesh), length(mass_quotient_knots))
@@ -118,6 +156,10 @@ function InterpolatedRocheMesh(spherical_mesh::SimpleMesh, mass_quotient_knots)
 end
 
 
+
+"""
+Конструктор InterpolatedRocheMesh, который строит сферическую сетку, используя Meshes.RegularDiscretization и разбивает её на треугольники.
+"""
 function InterpolatedRocheMesh(number_of_points, mass_quotient_knots)
     sphere = Sphere((0. ,0., 0.), 1.)
     spherical_mesh = discretize(sphere, RegularDiscretization(number_of_points)) |>
@@ -127,7 +169,9 @@ function InterpolatedRocheMesh(number_of_points, mass_quotient_knots)
 end
 
 
-
+"""
+Meshes.GeoTable, содержащая сетку полости Роша при данном соотношении масс и значения |g| в каждой точке, нормированные на значение |g| в точке (x, y, z) = (-1, 0, 0).
+"""
 function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
     points = vertices(interpolated_mesh.spherical_mesh)
 
@@ -152,6 +196,17 @@ end
 
 # Functions related to integration
 
+"""
+Интеграл по сетке.
+Аргументы:
+- geo_table::Meshes.GeoTable — сетка
+- field_name — имя поля, под которым в вершинах geo_table хранятся значения, которые нужно интегрировать
+- direction — направление на наблюдателя
+- normals — предварительно вычисленные внешние нормали к граням сетки
+- areas — предварительно вычисленные площади граней
+- darkening_function — функция потемнения к краю, вызываемая как darkening_function(cosine, darkening_coefficients...)
+- darkening_coefficients — коэффициенты потемнения к краю
+"""
 function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, normals, areas,
                                   darkening_function, darkening_coefficients)
     vertices_values = getfield(values(geo_table, 0), field_name)
@@ -171,34 +226,21 @@ function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, no
 end
 
 
-function integrate_data_over_triangular_mesh(geo_table::GeoTable, field_name, direction)
-    vertices_values = getfield(values(geo_table, 0), field_name)
-
-    sum(faces(topology(domain(geo_table)), 2)) do connection
-        face = materialize(connection, vertices(domain(geo_table)))
-        visible_area = signed_visible_area(face, direction)
-        if visible_area < 0
-            return zero(visible_area)
-        else
-            val = avg_over_face(vertices_values, connection)
-            return visible_area * val
-        end
-    end
-end
-
-function signed_visible_area(face, direction)
-    a, b, c = vertices(face)
-    n = (b-a) × (c-a)
-    return (n ⋅ direction) / 2
-end
-
+"""
+Вспомогательная функция, чтобы усреднить значения в вершинах грани.
+Аргументы:
+- vertices_values — массив значений во всех вершинах
+- connection::Meshes.Connectivity — индексы нескольких вершин, образующих грань
+"""
 function avg_over_face(vertices_values, connection)
     index = indices(connection)
     return sum(vertices_values[i] for i ∈ index) / length(index)
 end
 
 
-
+"""
+Применяет функцию к значениям, которые лежат в вершинах GeoTable, и возвращает новую GeoTable c добавленным полем результатов.
+"""
 function apply_function(geo_table::GeoTable, f, arg_field_name, result_field_name, dim=0)
     data = getfield(geo_table, :values)
 
@@ -209,7 +251,9 @@ function apply_function(geo_table::GeoTable, f, arg_field_name, result_field_nam
     return GeoTable(domain(geo_table), data)
 end
 
-
+"""
+Применяет функцию к граням и возвращает массив значений. Грани имеют тип, например, Meshes.Triangle{3, Float64}.
+"""
 function calc_function_on_faces(geo_table::GeoTable, f, dim=2)
     f.(faces(domain(geo_table), dim))
 end
