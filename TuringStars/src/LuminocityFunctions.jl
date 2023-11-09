@@ -67,7 +67,9 @@ function claret_darkening(cosine, a1, a2, a3, a4)
     1. - a1 * (1 - √μ) - a2 * (1 - μ) - a3 * (1 - μ^1.5) - a4 * (1 - μ^2)
 end
 
+one1(x) = 1.
+
 StructTypes.StructType(::typeof(claret_darkening)) = StructTypes.StringType()
-StructTypes.StructType(::typeof(one)) = StructTypes.StringType()
+StructTypes.StructType(::typeof(one1)) = StructTypes.StringType()
 
 end

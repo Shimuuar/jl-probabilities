@@ -33,7 +33,7 @@ end
     luminocity_function = T_4
     fixed_temperature_at_bottom::Union{Nothing, Float64} = nothing
     temperature_limits::Union{Nothing, Tuple{Float64, Float64}} = (500., 50_000.)
-    darkening_function = one
+    darkening_function = one1
     darkening_coefficients = ()
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
