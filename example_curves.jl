@@ -172,11 +172,21 @@ end
 # ╔═╡ 5b03df78-85f1-4f54-b814-9658f4666779
 darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272)
 
+# ╔═╡ d88a8c9a-9afb-4f0e-95d8-3b60f0fcf22e
+darkening_coefficients2 = (1.2143, -0.3175, 0.0665, -0.0100)
+	# (1.2290, -0.2192, -0.1071, 0.0679)
+
+# ╔═╡ 21085b08-dad7-4d62-963e-5355576be10b
+darkening_coefficients3 = (1.6389, -2.4779, 2.1452, -0.7306)
+
 # ╔═╡ e1cb3cb6-532d-43f8-beaa-646f8c1264fa
 begin
 	local θ = 0 : 0.01 : π/2
 	local cosines = cos.(θ)
-	plot(θ, claret_darkening.(cosines, darkening_coefficients...), xlabel = "θ", title = "Коэффициент потемнения к краю")
+	plot(xlabel = "θ", title = "Коэффициент потемнения к краю", legend = :bottomleft)
+	plot!(θ, claret_darkening.(cosines, darkening_coefficients...), label = "T = 3600, log g = 4.0")
+	plot!(θ, claret_darkening.(cosines, darkening_coefficients2...), label = "T = 2000, log g = 4.0")
+	plot!(θ, claret_darkening.(cosines, darkening_coefficients3...), label = "T = 3600, log g = 5.0")
 end
 
 # ╔═╡ 4b1e0d61-d58a-4e64-a120-1da21c8ece50
@@ -190,7 +200,14 @@ begin
 	plot!(
 		phases,
 		star_magnitude(phases; params...) .- 0.114 ,
-		label = "С потемнением"
+		label = "С потемнением T = 3600"
+	)
+	plot!(
+		phases,
+		star_magnitude(phases; params...,
+			darkening_coefficients = darkening_coefficients2
+		) .- 0.19,
+		label = "С потемнением T = 2000"
 	)
 	plot!(legend = :bottomright)
 end
@@ -235,6 +252,8 @@ d = (1/√2, 1/√2, 0.)
 # ╠═ae5f7182-0a38-4178-bf15-a7307876826e
 # ╠═8b8880ed-eec4-4ae3-8055-5b899915dff7
 # ╠═5b03df78-85f1-4f54-b814-9658f4666779
+# ╠═d88a8c9a-9afb-4f0e-95d8-3b60f0fcf22e
+# ╠═21085b08-dad7-4d62-963e-5355576be10b
 # ╠═e1cb3cb6-532d-43f8-beaa-646f8c1264fa
 # ╠═4b1e0d61-d58a-4e64-a120-1da21c8ece50
 # ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
