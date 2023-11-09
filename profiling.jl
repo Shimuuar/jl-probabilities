@@ -26,8 +26,8 @@ initial_params = (;
 	mass_quotient = 0.5,
 	initial_phase = 0.77,
 	observer_angle = π/2,
-	temperature_at_bottom = 5000,
-	offset = 18.14 # 41.4, 18.14, 18.1
+	temperature_at_bottom = 3500,
+	offset = 17.25 # 17.17
 )
 
 model_params = ModelParams(
@@ -35,6 +35,9 @@ model_params = ModelParams(
 	β = 0.25,
 	fixed_σ = 0.1,
 	luminocity_function = black_body_K,
+	fixed_temperature_at_bottom = initial_params.temperature_at_bottom,
+	darkening_function = claret_darkening,
+	darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
 	measurements_t = points.day,
 	measurements_y = points.K
 )
