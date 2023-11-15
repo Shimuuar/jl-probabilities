@@ -64,7 +64,8 @@ StructTypes.StructType(::typeof(black_body_K)) = StructTypes.StringType()
 
 function claret_darkening(cosine, a1, a2, a3, a4)
     μ = cosine
-    1. - a1 * (1 - √μ) - a2 * (1 - μ) - a3 * (1 - μ^1.5) - a4 * (1 - μ^2)
+    sqrt_μ = √μ
+    1. - a1 * (1 - sqrt_μ) - a2 * (1 - μ) - a3 * (1 - sqrt_μ^3) - a4 * (1 - μ^2)
 end
 
 one1(x) = 1.
