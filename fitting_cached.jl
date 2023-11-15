@@ -60,17 +60,21 @@ initial_params = (;
 	mass_quotient = 0.5,
 	initial_phase = 0.77,
 	observer_angle = π/2,
-	temperature_at_bottom = 3500,
-	offset = 17.25 # 17.17
+	temperature_at_bottom = 3500.,
+	offset = 17.25, # 17.17,
+
+	period = estimated_period,
+	β = 0.25,
+	σ = 0.1,
 )
 
 # ╔═╡ 97fd2129-d706-480c-a97d-9804027d8b40
 model_params = ModelParams(
 	period = estimated_period,
 	β = 0.25,
-	fixed_σ = 0.1,
+	σ = 0.1,
 	luminocity_function = black_body_K,
-	fixed_temperature_at_bottom = initial_params.temperature_at_bottom,
+	temperature_at_bottom = initial_params.temperature_at_bottom,
 	darkening_function = claret_darkening,
 	darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
 	measurements_t = points.day,
@@ -147,7 +151,7 @@ begin
 			mass_quotient = samples_[i][:mass_quotient].data[1],
 			observer_angle = samples_[i][:observer_angle].data[1],
 			temperature_at_bottom = @something(
-				model_params.fixed_temperature_at_bottom,
+				model_params.temperature_at_bottom,
 				samples_[i][:temperature_at_bottom].data[1]
 			),
 			β = model_params.β,

@@ -229,9 +229,6 @@ d = (1/√2, 1/√2, 0.)
 # ╔═╡ c6c9f467-d821-47e2-b2a1-fedfdb685880
 @code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, darkening_coefficients)
 
-# ╔═╡ 7801f54a-6540-4d4f-973e-29b265dd1095
-typeof(collect(faces(domain(mesh), 2))[1])
-
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
 # ╠═243eae5b-8f0a-4246-8f2e-3de35bb3941a
@@ -260,4 +257,3 @@ typeof(collect(faces(domain(mesh), 2))[1])
 # ╠═8f019dcc-fff8-4a7f-a15c-d5e5d507656f
 # ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
 # ╠═c6c9f467-d821-47e2-b2a1-fedfdb685880
-# ╠═7801f54a-6540-4d4f-973e-29b265dd1095

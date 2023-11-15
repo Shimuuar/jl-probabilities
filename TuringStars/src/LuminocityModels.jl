@@ -27,17 +27,17 @@ end
 @kwdef struct ModelParams
     mesh_params::MeshParams = MeshParams()
     model_function::Function = first_model
-    period::Union{Float64, Nothing}
-    β::Union{Nothing, Float64}
-    fixed_σ::Union{Nothing, Float64, Vector{Float64}} = nothing
+    period::Union{Float64, Distribution}
+    β::Union{Float64, Distribution} = 0.25
+    σ::Union{Float64, Vector{Float64}, Distribution} = 0.1
     luminocity_function = T_4
-    fixed_temperature_at_bottom::Union{Nothing, Float64} = nothing
-    temperature_limits::Union{Nothing, Tuple{Float64, Float64}} = (500., 50_000.)
+    temperature_at_bottom::Union{Float64, Distribution} = 3500.
     darkening_function = one1
     darkening_coefficients = ()
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
 end
+StructTypes.StructType(::Distribution) = StructTypes.StringType()
 
 @kwdef struct ChainParams
     model_params::ModelParams
@@ -48,6 +48,19 @@ end
 end
 StructTypes.StructType(::Turing.InferenceAlgorithm) = StructTypes.StringType()
 
+
+
+macro dist_or_const(var, val)
+    esc(:(
+        if isa($val, Distribution)
+            $var ~ $val
+        elseif isa($val, Float64)
+            $var = $val
+        else
+            throw(ArgumentError("val must be either Distribution or Float64"))
+        end
+    ))
+end
 
 
 function first_model(model_params)
@@ -62,25 +75,23 @@ function first_model(model_params)
 
     @model function model(measurements_t, measurements_y)
         initial_phase ~ Uniform(-π, π)
-        phases = initial_phase .+ measurements_t * 2π / model_params.period
+
+        @dist_or_const period model_params.period
+
+        phases = initial_phase .+ measurements_t * 2π / period
 
         mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
         observer_angle ~ Uniform(0., π)
 
-        if model_params.fixed_temperature_at_bottom !== nothing
-            temperature_at_bottom = model_params.fixed_temperature_at_bottom
-        elseif model_params.temperature_limits !== nothing
-            temperature_at_bottom ~ Uniform(model_params.temperature_limits...)
-        else
-            temperature_at_bottom ~ FlatPos(500.)
-        end
+        @dist_or_const temperature_at_bottom model_params.temperature_at_bottom
+        @dist_or_const β model_params.β
 
         predicted_magnitudes = star_magnitude(
             phases;
             mass_quotient,
             observer_angle,
             temperature_at_bottom,
-            model_params.β,
+            β,
             interpolated_mesh,
             model_params.luminocity_function,
             model_params.darkening_function,
@@ -90,11 +101,7 @@ function first_model(model_params)
         offset ~ Flat()
         predicted_magnitudes .+= offset
 
-        if model_params.fixed_σ === nothing
-            σ ~ FlatPos(0.)
-        else
-            σ = model_params.fixed_σ
-        end
+        @dist_or_const σ model_params.σ
 
         measurements_y .~ Normal.(predicted_magnitudes, σ)
     end
@@ -103,6 +110,55 @@ function first_model(model_params)
 end
 
 StructTypes.StructType(::typeof(first_model)) = StructTypes.StringType()
+
+
+function second_model(model_params)
+    interpolated_mesh = InterpolatedRocheMesh(
+        model_params.mesh_params.n_discretization_points,
+        model_params.mesh_params.mass_quotient_nodes
+    )
+
+    mass_quotient_min = model_params.mesh_params.mass_quotient_nodes[1]
+    mass_quotient_max = model_params.mesh_params.mass_quotient_nodes[end]
+
+
+    @model function model(measurements_t, measurements_y)
+        initial_phase ~ Uniform(-π, π)
+
+        @dist_or_const period model_params.period
+
+        phases = initial_phase .+ measurements_t * 2π / period
+
+        mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
+        observer_angle ~ Uniform(0., π)
+
+        temperature_at_bottom ~ model_params.temperature_at_bottom
+        @dist_or_const β model_params.β
+
+        predicted_magnitudes = star_magnitude(
+            phases;
+            mass_quotient,
+            observer_angle,
+            temperature_at_bottom,
+            β,
+            interpolated_mesh,
+            model_params.luminocity_function,
+            model_params.darkening_function,
+            model_params.darkening_coefficients
+        )
+
+        offset ~ Flat()
+        predicted_magnitudes .+= offset
+
+        @dist_or_const σ model_params.σ
+
+        measurements_y .~ Normal.(predicted_magnitudes, σ)
+    end
+
+    return model(model_params.measurements_t, model_params.measurements_y)
+end
+
+StructTypes.StructType(::typeof(second_model)) = StructTypes.StringType()
 
 
 
