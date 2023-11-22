@@ -61,24 +61,26 @@ initial_params = (;
 	initial_phase = 0.77,
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
-	offset = 17.25, # 17.17,
-
-	period = estimated_period,
-	β = 0.25,
-	σ = 0.1,
+	offset = [17.25], # 17.17,
 )
+
+# ╔═╡ 4553e25c-e488-4909-8838-1f6f56ad4012
+channels = [
+	ChannelParams(
+		measurements_t = points.day,
+		measurements_y = points.K,
+		darkening_function = claret_darkening,
+		darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
+		luminocity_function = black_body_K,
+		σ = 0.1
+	)
+]
 
 # ╔═╡ 97fd2129-d706-480c-a97d-9804027d8b40
 model_params = ModelParams(
-	period = estimated_period, #FlatPos(1.),
+	channels = channels,
+	period = estimated_period,
 	β = 0.25,
-	σ = 0.1,
-	luminocity_function = black_body_K,
-	temperature_at_bottom = initial_params.temperature_at_bottom,
-	darkening_function = claret_darkening,
-	darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
-	measurements_t = points.day,
-	measurements_y = points.K
 )
 
 # ╔═╡ 00044db4-b168-44be-9d39-87d27b7d330d
@@ -103,12 +105,12 @@ begin
 		initial_params[(:mass_quotient, :observer_angle, :temperature_at_bottom)]...,
 		interpolated_mesh,
 		β = model_params.β,
-		luminocity_function = model_params.luminocity_function,
-		darkening_function = model_params.darkening_function,
-		darkening_coefficients = model_params.darkening_coefficients
+		luminocity_function = model_params.channels[1].luminocity_function,
+		darkening_function = model_params.channels[1].darkening_function,
+		darkening_coefficients = model_params.channels[1].darkening_coefficients
 	)
 
-	vals .+= initial_params.offset
+	vals .+= initial_params.offset[1]
 
 	plot!(days, vals)
 end
@@ -128,8 +130,8 @@ samples = cached_sample(chain_params)
 chain_params |> JSON3.write |> sha1 |> bytes2hex
 
 # ╔═╡ 94abc73f-8f2e-42f5-86d2-17836d645ec2
-macro get_number(symbol, params, sample)
-	@eval isa($params.$symbol, Number) ? $params.$symbol : $sample[symbol].data[1]
+macro get_number(symbol, parameters, sample)
+	@eval isa($parameters.$symbol, Number) ? $parameters.$symbol : $sample[symbol].data[1]
 end
 
 # ╔═╡ 174cd8b8-1d1c-4141-a170-6f978f5195e1
@@ -159,12 +161,12 @@ begin
 			temperature_at_bottom = (@get_number temperature_at_bottom model_params samples_[i]),
 			β = model_params.β,
 			interpolated_mesh,
-			luminocity_function = model_params.luminocity_function,
-			darkening_function = model_params.darkening_function,
-			darkening_coefficients = model_params.darkening_coefficients
+			luminocity_function = model_params.channels[1].luminocity_function,
+			darkening_function = model_params.channels[1].darkening_function,
+			darkening_coefficients = model_params.channels[1].darkening_coefficients
 		)
 
-		vals .+= samples_[i][:offset].data[1]
+		vals .+= samples_[i]["offset[1]"].data[1]
 		plot!(days, vals)
 	end
 	plot!()
@@ -182,6 +184,7 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╠═2fe448f3-1744-4bbb-83e7-290a9214e7c8
 # ╠═960ab30d-a1fa-4803-a4d4-d0860286ba87
 # ╠═00044db4-b168-44be-9d39-87d27b7d330d
+# ╠═4553e25c-e488-4909-8838-1f6f56ad4012
 # ╠═97fd2129-d706-480c-a97d-9804027d8b40
 # ╠═c88314a3-cd9e-42b2-acee-4d613b1b36e1
 # ╠═eda9134f-b918-42f0-bcfc-e0d601eeeaad

@@ -37,14 +37,14 @@ begin
 end
 
 # ╔═╡ e28e8c98-caa0-41c0-bb15-53c6679dda6d
-pgram = lombscargle(points.day, points.J)
+pgram = lombscargle(points.day, points.K)
 
 # ╔═╡ 55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
 plot(
 	freq(pgram),
 	power(pgram),
 	xlabel = "частота (1/день)",
-	title = "Lomb-Scargle periodogram, сигнал J"
+	title = "Lomb-Scargle periodogram, сигнал K"
 )
 
 # ╔═╡ 5b2930bc-2de0-4388-824a-190d1169cbfe
@@ -62,11 +62,19 @@ initial_params = (;
 	initial_phase = 0.77,
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
-	offset = 19.63,
+	offset = [17.25, 19.63],
 )
 
 # ╔═╡ 30a74a85-c431-469c-bf3d-00190db36c56
 channels = [
+	ChannelParams(
+		measurements_t = points.day,
+		measurements_y = points.K,
+		darkening_function = claret_darkening,
+		darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
+		luminocity_function = black_body_K,
+		σ = 0.1
+	)
 	ChannelParams(
 		measurements_t = points.day,
 		measurements_y = points.J,
@@ -88,12 +96,12 @@ model_params = ModelParams(
 begin
 	scatter(
 		points.day .% (estimated_period),
-		points.J,
-		yerr = points.J_err,
+		points.K,
+		yerr = points.K_err,
 		markersize = 2,
 		xlabel = "Julian day % period",
 		ylabel = "Звёздная величина",
-		title = "J",
+		title = "K",
 		yflip = true
 	)
 
@@ -129,17 +137,22 @@ samples = cached_sample(chain_params)
 # ╔═╡ a5070b94-48c2-4405-af78-fddd5784161e
 chain_params |> JSON3.write |> sha1 |> bytes2hex
 
+# ╔═╡ 94abc73f-8f2e-42f5-86d2-17836d645ec2
+macro get_number(symbol, parameters, sample)
+	@eval isa($parameters.$symbol, Number) ? $parameters.$symbol : $sample[symbol].data[1]
+end
+
 # ╔═╡ 174cd8b8-1d1c-4141-a170-6f978f5195e1
 begin
 	scatter(
 		points.day .% estimated_period,
-		points.J,
-		yerr = points.J_err,
+		points.K,
+		yerr = points.K_err,
 		markersize = 2,
 		xlabel = "Julian day % period",
 		ylabel = "Звёздная величина",
 		title = "K",
-		yflip = true
+		yflip = true,
 	)
 
 	local days = 0 : estimated_period
@@ -167,6 +180,42 @@ begin
 	plot!()
 end
 
+# ╔═╡ c2fe75ca-adef-4f75-9a51-35ce4d7acd1c
+begin
+	scatter(
+		points.day .% estimated_period,
+		points.J,
+		yerr = points.J_err,
+		markersize = 2,
+		xlabel = "Julian day % period",
+		ylabel = "Звёздная величина",
+		title = "J",
+		yflip = true
+	)
+
+	local days = 0 : estimated_period
+	local phases = @. initial_params.initial_phase + days / estimated_period * 2π
+	
+	for i in 1 : length(samples_)
+	
+		local vals = star_magnitude(
+			phases;
+			mass_quotient = samples_[i][:mass_quotient].data[1],
+			observer_angle = samples_[i][:observer_angle].data[1],
+			temperature_at_bottom = model_params.temperature_at_bottom,
+			β = model_params.β,
+			interpolated_mesh,
+			luminocity_function = model_params.channels[2].luminocity_function,
+			darkening_function = model_params.channels[2].darkening_function,
+			darkening_coefficients = model_params.channels[2].darkening_coefficients
+		)
+
+		vals .+= samples_[i]["offset[2]"].data[1]
+		plot!(days, vals)
+	end
+	plot!()
+end
+
 # ╔═╡ 45422b39-64d5-4a75-b8c0-8ba0011ba089
 plot(samples, bottom_margin = 50Plots.px)
 
@@ -188,6 +237,8 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╠═eda9134f-b918-42f0-bcfc-e0d601eeeaad
 # ╠═33b862f3-dc6a-46fe-b73e-a7df7af22e92
 # ╠═a5070b94-48c2-4405-af78-fddd5784161e
+# ╠═94abc73f-8f2e-42f5-86d2-17836d645ec2
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
+# ╠═c2fe75ca-adef-4f75-9a51-35ce4d7acd1c
 # ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
 # ╠═61b8f08b-4252-4ea7-9b27-37771331de77

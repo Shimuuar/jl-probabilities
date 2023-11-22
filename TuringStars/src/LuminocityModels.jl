@@ -13,6 +13,7 @@ using .LuminocityFunctions
 
 export
     MeshParams,
+    ChannelParams,
     ModelParams,
     ChainParams,
     first_model,
@@ -24,18 +25,22 @@ export
     mass_quotient_nodes = 0.1 : 0.1 : 10.
 end
 
+@kwdef struct ChannelParams
+    measurements_t::Vector{Float64}
+    measurements_y::Vector{Float64}
+    darkening_function = one1
+    darkening_coefficients = ()
+    luminocity_function = T_4
+    σ::Union{Float64, Vector{Float64}, Distribution} = 0.1
+end
+
 @kwdef struct ModelParams
     mesh_params::MeshParams = MeshParams()
     model_function::Function = first_model
+    channels::Vector{ChannelParams}
     period::Union{Float64, Distribution}
     β::Union{Float64, Distribution} = 0.25
-    σ::Union{Float64, Vector{Float64}, Distribution} = 0.1
-    luminocity_function = T_4
     temperature_at_bottom::Union{Float64, Distribution} = 3500.
-    darkening_function = one1
-    darkening_coefficients = ()
-    measurements_t::Vector{Float64}
-    measurements_y::Vector{Float64}
 end
 StructTypes.StructType(::Distribution) = StructTypes.StringType()
 
@@ -54,10 +59,10 @@ macro dist_or_const(var, val)
     esc(:(
         if isa($val, Distribution)
             $var ~ $val
-        elseif isa($val, Float64)
+        elseif isa($val, Float64) || isa($val, Vector{Float64})
             $var = $val
         else
-            throw(ArgumentError("val must be either Distribution or Float64"))
+            throw(ArgumentError("val must be Distribution, Float64 or Vector{Float64}"))
         end
     ))
 end
@@ -73,40 +78,42 @@ function first_model(model_params)
     mass_quotient_max = model_params.mesh_params.mass_quotient_nodes[end]
 
 
-    @model function model(measurements_t, measurements_y)
-        initial_phase ~ Uniform(-π, π)
-
-        @dist_or_const period model_params.period
-
-        phases = initial_phase .+ measurements_t * 2π / period
-
+    @model function model(channels::Vector{ChannelParams}, measurements_y = Float64[])
         mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
         observer_angle ~ Uniform(0., π/2)
 
         @dist_or_const temperature_at_bottom model_params.temperature_at_bottom
         @dist_or_const β model_params.β
 
-        predicted_magnitudes = star_magnitude(
-            phases;
-            mass_quotient,
-            observer_angle,
-            temperature_at_bottom,
-            β,
-            interpolated_mesh,
-            model_params.luminocity_function,
-            model_params.darkening_function,
-            model_params.darkening_coefficients
-        )
+        initial_phase ~ Uniform(-π, π)
 
-        offset ~ Flat()
-        predicted_magnitudes .+= offset
+        @dist_or_const period model_params.period
 
-        @dist_or_const σ model_params.σ
+        offset ~ filldist(Flat(), length(channels))
 
-        measurements_y .~ Normal.(predicted_magnitudes, σ)
+        for (i, channel) ∈ enumerate(channels)
+            phases = initial_phase .+ channel.measurements_t * 2π / period
+
+            predicted_magnitudes = star_magnitude(
+                phases;
+                mass_quotient,
+                observer_angle,
+                temperature_at_bottom,
+                β,
+                interpolated_mesh,
+                channel.luminocity_function,
+                channel.darkening_function,
+                channel.darkening_coefficients
+            )
+
+            predicted_magnitudes .+= offset[i]
+
+            measurements_y = channel.measurements_y
+            measurements_y .~ Normal.(predicted_magnitudes, channel.σ)
+        end
     end
 
-    return model(model_params.measurements_t, model_params.measurements_y)
+    return model(model_params.channels)
 end
 
 StructTypes.StructType(::typeof(first_model)) = StructTypes.StringType()
