@@ -10,6 +10,7 @@ export
     black_body_K_rectangle,
     black_body_K,
     _black_body_K,
+    black_body_J,
     claret_darkening
 
 T_4(T) = T^4
@@ -56,10 +57,21 @@ end
 # JSON3.write(black_body_K) = "black_body_K"
 
 
+const _black_body_J = make_interpolation_of_planck_integral(
+    1.25e-6,
+    0.33e-6,
+    0 : 100 : 100_000
+)
+function black_body_J(T)
+    return _black_body_J(T)
+end
+
+
 
 StructTypes.StructType(::typeof(T_4)) = StructTypes.StringType()
 StructTypes.StructType(::typeof(black_body_K_rectangle)) = StructTypes.StringType()
 StructTypes.StructType(::typeof(black_body_K)) = StructTypes.StringType()
+StructTypes.StructType(::typeof(black_body_J)) = StructTypes.StringType()
 
 
 function claret_darkening(cosine, a1, a2, a3, a4)

@@ -81,7 +81,7 @@ function first_model(model_params)
         phases = initial_phase .+ measurements_t * 2π / period
 
         mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
-        observer_angle ~ Uniform(0., π)
+        observer_angle ~ Uniform(0., π/2)
 
         @dist_or_const temperature_at_bottom model_params.temperature_at_bottom
         @dist_or_const β model_params.β
@@ -110,56 +110,6 @@ function first_model(model_params)
 end
 
 StructTypes.StructType(::typeof(first_model)) = StructTypes.StringType()
-
-
-function second_model(model_params)
-    interpolated_mesh = InterpolatedRocheMesh(
-        model_params.mesh_params.n_discretization_points,
-        model_params.mesh_params.mass_quotient_nodes
-    )
-
-    mass_quotient_min = model_params.mesh_params.mass_quotient_nodes[1]
-    mass_quotient_max = model_params.mesh_params.mass_quotient_nodes[end]
-
-
-    @model function model(measurements_t, measurements_y)
-        initial_phase ~ Uniform(-π, π)
-
-        @dist_or_const period model_params.period
-
-        phases = initial_phase .+ measurements_t * 2π / period
-
-        mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
-        observer_angle ~ Uniform(0., π)
-
-        temperature_at_bottom ~ model_params.temperature_at_bottom
-        @dist_or_const β model_params.β
-
-        predicted_magnitudes = star_magnitude(
-            phases;
-            mass_quotient,
-            observer_angle,
-            temperature_at_bottom,
-            β,
-            interpolated_mesh,
-            model_params.luminocity_function,
-            model_params.darkening_function,
-            model_params.darkening_coefficients
-        )
-
-        offset ~ Flat()
-        predicted_magnitudes .+= offset
-
-        @dist_or_const σ model_params.σ
-
-        measurements_y .~ Normal.(predicted_magnitudes, σ)
-    end
-
-    return model(model_params.measurements_t, model_params.measurements_y)
-end
-
-StructTypes.StructType(::typeof(second_model)) = StructTypes.StringType()
-
 
 
 function star_magnitude(phases; mass_quotient, observer_angle,

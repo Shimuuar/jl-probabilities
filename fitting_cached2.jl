@@ -31,19 +31,20 @@ using JSON3, SHA
 # ╔═╡ b8bda58e-9ed2-4da0-a67a-6d5990e7389d
 begin
 	points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
-    points = map(x -> isa(x, Number) ? x : NaN, points)
+	points = map(x -> isa(x, Number) ? x : missing, points)
 	points = DataFrame(points, [:day, :J, :J_err, :K, :K_err])
+	points = dropmissing(points)
 end
 
 # ╔═╡ e28e8c98-caa0-41c0-bb15-53c6679dda6d
-pgram = lombscargle(points.day, points.K)
+pgram = lombscargle(points.day, points.J)
 
 # ╔═╡ 55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
 plot(
 	freq(pgram),
 	power(pgram),
 	xlabel = "частота (1/день)",
-	title = "Lomb-Scargle periodogram, сигнал K"
+	title = "Lomb-Scargle periodogram, сигнал J"
 )
 
 # ╔═╡ 5b2930bc-2de0-4388-824a-190d1169cbfe
@@ -61,38 +62,33 @@ initial_params = (;
 	initial_phase = 0.77,
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
-	offset = 17.25, # 17.17,
-
-	period = estimated_period,
-	β = 0.25,
-	σ = 0.1,
+	offset = 19.68,
 )
 
 # ╔═╡ 97fd2129-d706-480c-a97d-9804027d8b40
 model_params = ModelParams(
-	period = estimated_period, #FlatPos(1.),
+	period = estimated_period,
 	β = 0.25,
 	σ = 0.1,
-	luminocity_function = black_body_K,
+	luminocity_function = black_body_J,
 	temperature_at_bottom = initial_params.temperature_at_bottom,
 	darkening_function = claret_darkening,
 	darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
 	measurements_t = points.day,
-	measurements_y = points.K
+	measurements_y = points.J
 )
 
 # ╔═╡ 00044db4-b168-44be-9d39-87d27b7d330d
 begin
 	scatter(
 		points.day .% (estimated_period),
-		points.K,
-		yerr = points.K_err,
+		points.J,
+		yerr = points.J_err,
 		markersize = 2,
 		xlabel = "Julian day % period",
 		ylabel = "Звёздная величина",
-		title = "K",
-		yflip = true,
-		legend = false
+		title = "J",
+		yflip = true
 	)
 
 	local days = 0:estimated_period
@@ -128,21 +124,22 @@ samples = cached_sample(chain_params)
 chain_params |> JSON3.write |> sha1 |> bytes2hex
 
 # ╔═╡ 94abc73f-8f2e-42f5-86d2-17836d645ec2
-macro get_number(symbol, params, sample)
-	@eval isa($params.$symbol, Number) ? $params.$symbol : $sample[symbol].data[1]
+macro get_number(symbol, parameters, sample)
+	@eval isa($parameters.$symbol, Number) ? $parameters.$symbol : $sample[symbol].data[1]
 end
 
 # ╔═╡ 174cd8b8-1d1c-4141-a170-6f978f5195e1
 begin
 	scatter(
 		points.day .% estimated_period,
-		points.K,
-		yerr = points.K_err,
+		points.J,
+		yerr = points.J_err,
 		markersize = 2,
 		xlabel = "Julian day % period",
 		ylabel = "Звёздная величина",
-		title = "K",
-		yflip = true
+		title = "J",
+		yflip = true,
+		legend = false
 	)
 
 	local days = 0 : estimated_period
@@ -173,6 +170,9 @@ end
 # ╔═╡ 45422b39-64d5-4a75-b8c0-8ba0011ba089
 plot(samples, bottom_margin = 50Plots.px)
 
+# ╔═╡ 61b8f08b-4252-4ea7-9b27-37771331de77
+
+
 # ╔═╡ Cell order:
 # ╠═36db1462-6dbf-11ee-38c4-05d52e2c894c
 # ╠═b8bda58e-9ed2-4da0-a67a-6d5990e7389d
@@ -190,3 +190,4 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╠═94abc73f-8f2e-42f5-86d2-17836d645ec2
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
 # ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
+# ╠═61b8f08b-4252-4ea7-9b27-37771331de77

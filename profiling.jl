@@ -14,7 +14,7 @@ end
 
 begin
     points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
-    points = map(x -> isa(x, Number) ? x : NaN, points)
+    points = map(x -> isa(x, Number) ? x : missing, points)
     points = DataFrame(points, [:day, :J, :J_err, :K, :K_err])
 end
 
@@ -33,9 +33,9 @@ initial_params = (;
 model_params = ModelParams(
 	period = estimated_period,
 	β = 0.25,
-	fixed_σ = 0.1,
+	σ = 0.1,
 	luminocity_function = black_body_K,
-	fixed_temperature_at_bottom = initial_params.temperature_at_bottom,
+	temperature_at_bottom = Normal(initial_params.temperature_at_bottom, 500.),
 	darkening_function = claret_darkening,
 	darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
 	measurements_t = points.day,
