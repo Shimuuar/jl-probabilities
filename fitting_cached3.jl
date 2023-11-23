@@ -56,6 +56,66 @@ end
 # ╔═╡ 2fe448f3-1744-4bbb-83e7-290a9214e7c8
 interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
 
+# ╔═╡ d9b9b851-cca0-4a40-a627-7dec9c5da6c1
+function plot_line!(model_params, sample, p = missing)
+	if p === missing
+		p = plot(layout = (length(model_params.channels), 1))
+	end
+
+	days = 0 : model_params.period
+	phases = days ./ model_params.period .* 2π .+ sample[:initial_phase]
+
+	for (i, (channel, subplot)) ∈ enumerate(zip(model_params.channels, p.subplots))
+		vals = star_magnitude(
+			phases;
+			mass_quotient = sample[:mass_quotient],
+			observer_angle = sample[:observer_angle],
+			temperature_at_bottom = model_params.temperature_at_bottom,
+			interpolated_mesh,
+			β = model_params.β,
+			luminocity_function = channel.luminocity_function,
+			darkening_function = channel.darkening_function,
+			darkening_coefficients = channel.darkening_coefficients
+		)
+		vals .+= sample[:offset][i]
+		plot!(subplot, days, vals)
+	end
+	plot!()
+end
+
+# ╔═╡ 275cb92f-d5d1-4fb9-acb3-5d2317f84a2b
+function plot_garbige(model_params, samples)
+	p = plot(
+		layout = (2, 1),
+		title = ["K" "J"],
+		legend = false,
+		xlabel = ["" "Julian day % period"],
+		ylabel = "Звездная величина",
+		yflip = true,
+		size = (600, 600)
+	)
+
+	for (channel, subplot) ∈ zip(model_params.channels, p.subplots)
+		t = channel.measurements_t .% model_params.period
+		scatter!(
+			subplot,
+			t,
+			channel.measurements_y,
+			markersize = 2,
+		)
+	end
+
+	for i ∈ 1 : length(samples)
+		sample = samples[i]
+		if isa(sample, Chains)
+			sample = get_params(sample)
+		end
+		
+		plot_line!(model_params, sample, p)
+	end
+	plot!()
+end
+
 # ╔═╡ 960ab30d-a1fa-4803-a4d4-d0860286ba87
 initial_params = (;
 	mass_quotient = 0.5,
@@ -93,40 +153,12 @@ model_params = ModelParams(
 )
 
 # ╔═╡ 00044db4-b168-44be-9d39-87d27b7d330d
-begin
-	scatter(
-		points.day .% (estimated_period),
-		points.K,
-		yerr = points.K_err,
-		markersize = 2,
-		xlabel = "Julian day % period",
-		ylabel = "Звёздная величина",
-		title = "K",
-		yflip = true
-	)
-
-	local days = 0:estimated_period
-	phases = @. initial_params.initial_phase + days / estimated_period * 2π
-	
-	local vals = star_magnitude(
-		phases;
-		initial_params[(:mass_quotient, :observer_angle, :temperature_at_bottom)]...,
-		interpolated_mesh,
-		β = model_params.β,
-		luminocity_function = model_params.channels[1].luminocity_function,
-		darkening_function = model_params.channels[1].darkening_function,
-		darkening_coefficients = model_params.channels[1].darkening_coefficients
-	)
-
-	vals .+= initial_params.offset[1]
-
-	plot!(days, vals)
-end
+plot_garbige(model_params, [initial_params])
 
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 10,
+	n_samples = 900,
 	init_params = initial_params,
 	sampler = NUTS()
 )
@@ -144,76 +176,8 @@ end
 
 # ╔═╡ 174cd8b8-1d1c-4141-a170-6f978f5195e1
 begin
-	scatter(
-		points.day .% estimated_period,
-		points.K,
-		yerr = points.K_err,
-		markersize = 2,
-		xlabel = "Julian day % period",
-		ylabel = "Звёздная величина",
-		title = "K",
-		yflip = true,
-	)
-
-	local days = 0 : estimated_period
-	local phases = @. initial_params.initial_phase + days / estimated_period * 2π
-
 	samples_ = sample(samples, 15)
-	
-	for i in 1 : length(samples_)
-	
-		local vals = star_magnitude(
-			phases;
-			mass_quotient = samples_[i][:mass_quotient].data[1],
-			observer_angle = samples_[i][:observer_angle].data[1],
-			temperature_at_bottom = model_params.temperature_at_bottom,
-			β = model_params.β,
-			interpolated_mesh,
-			luminocity_function = model_params.channels[1].luminocity_function,
-			darkening_function = model_params.channels[1].darkening_function,
-			darkening_coefficients = model_params.channels[1].darkening_coefficients
-		)
-
-		vals .+= samples_[i]["offset[1]"].data[1]
-		plot!(days, vals)
-	end
-	plot!()
-end
-
-# ╔═╡ c2fe75ca-adef-4f75-9a51-35ce4d7acd1c
-begin
-	scatter(
-		points.day .% estimated_period,
-		points.J,
-		yerr = points.J_err,
-		markersize = 2,
-		xlabel = "Julian day % period",
-		ylabel = "Звёздная величина",
-		title = "J",
-		yflip = true
-	)
-
-	local days = 0 : estimated_period
-	local phases = @. initial_params.initial_phase + days / estimated_period * 2π
-	
-	for i in 1 : length(samples_)
-	
-		local vals = star_magnitude(
-			phases;
-			mass_quotient = samples_[i][:mass_quotient].data[1],
-			observer_angle = samples_[i][:observer_angle].data[1],
-			temperature_at_bottom = model_params.temperature_at_bottom,
-			β = model_params.β,
-			interpolated_mesh,
-			luminocity_function = model_params.channels[2].luminocity_function,
-			darkening_function = model_params.channels[2].darkening_function,
-			darkening_coefficients = model_params.channels[2].darkening_coefficients
-		)
-
-		vals .+= samples_[i]["offset[2]"].data[1]
-		plot!(days, vals)
-	end
-	plot!()
+	plot_garbige(model_params, samples_)
 end
 
 # ╔═╡ 45422b39-64d5-4a75-b8c0-8ba0011ba089
@@ -229,6 +193,8 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╠═55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
 # ╠═5b2930bc-2de0-4388-824a-190d1169cbfe
 # ╠═2fe448f3-1744-4bbb-83e7-290a9214e7c8
+# ╠═d9b9b851-cca0-4a40-a627-7dec9c5da6c1
+# ╠═275cb92f-d5d1-4fb9-acb3-5d2317f84a2b
 # ╠═960ab30d-a1fa-4803-a4d4-d0860286ba87
 # ╠═00044db4-b168-44be-9d39-87d27b7d330d
 # ╠═30a74a85-c431-469c-bf3d-00190db36c56
@@ -239,6 +205,5 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╠═a5070b94-48c2-4405-af78-fddd5784161e
 # ╠═94abc73f-8f2e-42f5-86d2-17836d645ec2
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
-# ╠═c2fe75ca-adef-4f75-9a51-35ce4d7acd1c
 # ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
 # ╠═61b8f08b-4252-4ea7-9b27-37771331de77
