@@ -140,6 +140,7 @@ function InterpolatedRocheMesh(spherical_mesh::SimpleMesh, mass_quotient_knots)
 
         coords = coordinates.(vertices(spherical_mesh)) .* r_values_for_quotient
         g_values_for_quotient .= norm.(Ω_grad.(mass_quotient, coords)) ./ g0
+        r_values_for_quotient ./= r0
     end
 
     r_interpolants = [

@@ -34,6 +34,8 @@ begin
 	points = map(x -> isa(x, Number) ? x : missing, points)
 	points = DataFrame(points, [:day, :J, :J_err, :K, :K_err])
 	points = dropmissing(points)
+	points.day .-= points.day[1]
+	points
 end
 
 # ╔═╡ e28e8c98-caa0-41c0-bb15-53c6679dda6d
@@ -59,10 +61,10 @@ interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
 # ╔═╡ 960ab30d-a1fa-4803-a4d4-d0860286ba87
 initial_params = (;
 	mass_quotient = 0.5,
-	initial_phase = 0.77,
+	initial_phase = -1.45,
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
-	offset = 19.63,
+	offset = 21.27,
 )
 
 # ╔═╡ 30a74a85-c431-469c-bf3d-00190db36c56

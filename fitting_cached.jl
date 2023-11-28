@@ -33,6 +33,8 @@ begin
 	points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
     points = map(x -> isa(x, Number) ? x : NaN, points)
 	points = DataFrame(points, [:day, :J, :J_err, :K, :K_err])
+	points.day .-= points.day[1]
+	points
 end
 
 # ╔═╡ e28e8c98-caa0-41c0-bb15-53c6679dda6d
@@ -58,10 +60,10 @@ interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
 # ╔═╡ 960ab30d-a1fa-4803-a4d4-d0860286ba87
 initial_params = (;
 	mass_quotient = 0.5,
-	initial_phase = 0.77,
+	initial_phase = -1.45,
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
-	offset = [17.25], # 17.17,
+	offset = [18.9], # 17.17,
 )
 
 # ╔═╡ 4553e25c-e488-4909-8838-1f6f56ad4012
@@ -118,7 +120,7 @@ end
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 10,
+	n_samples = 256,
 	init_params = initial_params,
 	sampler = NUTS()
 )
