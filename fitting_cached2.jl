@@ -65,6 +65,7 @@ initial_params = (;
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
 	offset = 21.27,
+	σ_common = 0.1
 )
 
 # ╔═╡ 30a74a85-c431-469c-bf3d-00190db36c56
@@ -75,7 +76,8 @@ channels = [
 		darkening_function = claret_darkening,
 		darkening_coefficients = (1.2834, -1.4623, 1.5046, -0.5507),
 		luminocity_function = black_body_J,
-		σ = 0.1
+		σ_measured = points.K_err,
+		σ_common = FlatPos(0.),
 	)
 ]
 

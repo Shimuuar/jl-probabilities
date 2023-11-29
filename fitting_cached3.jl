@@ -124,6 +124,7 @@ initial_params = (;
 	initial_phase = -1.45,
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
+	σ_common = [0.1, 0.1],
 	offset = [18.9, 21.27],
 )
 
@@ -135,7 +136,8 @@ channels = [
 		darkening_function = claret_darkening,
 		darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
 		luminocity_function = black_body_K,
-		σ = 0.1
+		σ_measured = points.K_err,
+		σ_common = FlatPos(0.),
 	)
 	ChannelParams(
 		measurements_t = points.day,
@@ -143,7 +145,8 @@ channels = [
 		darkening_function = claret_darkening,
 		darkening_coefficients = (1.2834, -1.4623, 1.5046, -0.5507),
 		luminocity_function = black_body_J,
-		σ = 0.1
+		σ_measured = points.K_err,
+		σ_common = FlatPos(0.),
 	)
 ]
 

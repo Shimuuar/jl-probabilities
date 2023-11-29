@@ -64,6 +64,7 @@ initial_params = (;
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
 	offset = [18.9], # 17.17,
+	σ_common = 0.1,
 )
 
 # ╔═╡ 4553e25c-e488-4909-8838-1f6f56ad4012
@@ -74,7 +75,8 @@ channels = [
 		darkening_function = claret_darkening,
 		darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
 		luminocity_function = black_body_K,
-		σ = 0.1
+		σ_measured = points.K_err,
+		σ_common = FlatPos(0.)
 	)
 ]
 
@@ -120,7 +122,7 @@ end
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 256,
+	n_samples = 100,
 	init_params = initial_params,
 	sampler = NUTS()
 )

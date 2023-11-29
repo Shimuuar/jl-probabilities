@@ -31,7 +31,8 @@ end
     darkening_function = one1
     darkening_coefficients = ()
     luminocity_function = T_4
-    σ::Union{Float64, Vector{Float64}, Distribution} = 0.1
+    σ_measured::Vector{Float64}
+    σ_common::Union{Float64, Distribution} = 0.
 end
 
 @kwdef struct ModelParams
@@ -90,6 +91,7 @@ function first_model(model_params)
         @dist_or_const period model_params.period
 
         offset ~ filldist(Flat(), length(channels))
+        σ_common = Array{Float64}(undef, length(channels))
 
         for (i, channel) ∈ enumerate(channels)
             phases = initial_phase .+ channel.measurements_t * 2π / period
@@ -108,8 +110,11 @@ function first_model(model_params)
 
             predicted_magnitudes .+= offset[i]
 
+            @dist_or_const σ_common[i] channel.σ_common
+            σ = @. √(channel.σ_measured^2 + σ_common[i]^2)
+
             measurements_y = channel.measurements_y
-            measurements_y .~ Normal.(predicted_magnitudes, channel.σ)
+            measurements_y .~ Normal.(predicted_magnitudes, σ)
         end
     end
 
