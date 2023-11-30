@@ -64,7 +64,7 @@ initial_params = (;
 	initial_phase = -1.45,
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
-	offset = 21.27,
+	offset = 21.15,
 	σ_common = 0.1
 )
 
@@ -85,7 +85,7 @@ channels = [
 model_params = ModelParams(
 	channels = channels,
 	period = estimated_period,
-	β = 0.25,
+	β = 0.08,
 )
 
 # ╔═╡ 00044db4-b168-44be-9d39-87d27b7d330d

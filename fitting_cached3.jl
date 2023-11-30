@@ -104,6 +104,7 @@ function plot_garbige(model_params, samples)
 			t,
 			channel.measurements_y,
 			markersize = 2,
+			yerr = channel.σ_measured
 		)
 	end
 
@@ -125,7 +126,7 @@ initial_params = (;
 	observer_angle = π/2 - 0.1,
 	temperature_at_bottom = 3500.,
 	σ_common = [0.1, 0.1],
-	offset = [18.9, 21.27],
+	offset = [18.84, 21.15],
 )
 
 # ╔═╡ 30a74a85-c431-469c-bf3d-00190db36c56
@@ -154,7 +155,7 @@ channels = [
 model_params = ModelParams(
 	channels = channels,
 	period = estimated_period,
-	β = 0.25,
+	β = 0.08,
 )
 
 # ╔═╡ 00044db4-b168-44be-9d39-87d27b7d330d
@@ -163,7 +164,7 @@ plot_garbige(model_params, [initial_params])
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 12,
+	n_samples = 2000,
 	init_params = initial_params,
 	sampler = NUTS()
 )
