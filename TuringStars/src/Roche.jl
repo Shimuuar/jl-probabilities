@@ -20,7 +20,8 @@ export
     integrate_data_over_mesh2,
     apply_function,
     calc_function_on_faces,
-    luminocity_at_point
+    luminocity_at_point,
+    normalized_normal
 
 
 """
@@ -257,6 +258,16 @@ end
 """
 function calc_function_on_faces(geo_table::GeoTable, f, dim=2)
     f.(faces(domain(geo_table), dim))
+end
+
+
+"""
+Единичная нормаль к грани.
+Эта функция нужна начиная с версии Meshes.jl 0.39.0, в которой функция `normal` стала возвращать ненормированную нормаль.
+"""
+function normalized_normal(face::Meshes.Ngon{N, T}) where {N, T}
+    n = normal(face)
+    return n ./ norm(n)
 end
 
 end

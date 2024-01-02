@@ -142,7 +142,7 @@ function star_magnitude(phases; mass_quotient, observer_angle,
     mesh = apply_function(mesh, temperature, :g, :T)
     mesh = apply_function(mesh, luminocity_function, :T, :L)
 
-    normals = calc_function_on_faces(mesh, normal)
+    normals = calc_function_on_faces(mesh, normalized_normal)
     areas = calc_function_on_faces(mesh, area)
 
     luminocities = [
