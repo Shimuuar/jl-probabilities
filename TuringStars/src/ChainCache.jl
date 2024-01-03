@@ -46,7 +46,7 @@ function _uncached_sample(chain_params)
         model,
         chain_params.sampler,
         chain_params.n_samples,
-        init_params=init_params_array
+        initial_params=init_params_array
     )
 end
 
