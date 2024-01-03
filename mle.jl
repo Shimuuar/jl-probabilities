@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.29
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -21,7 +21,7 @@ begin
 	using Plots
 	using StatsPlots
 	plotlyjs()
-	theme(:juno)
+	theme(:default)
 
 	using LombScargle
 end
@@ -87,7 +87,7 @@ end
 function plot_garbige(model_params, samples)
 	p = plot(
 		layout = (2, 1),
-		title = ["K" "J"],
+		title = ["Спектральный канал K" "Спектральный канал J"],
 		legend = false,
 		xlabel = ["" "Julian day % period"],
 		ylabel = "Звездная величина",
@@ -134,7 +134,7 @@ channels = [
 		darkening_function = claret_darkening,
 		darkening_coefficients = (1.2834, -1.4623, 1.5046, -0.5507),
 		luminocity_function = black_body_J,
-		σ_measured = points.K_err,
+		σ_measured = points.J_err,
 		σ_common = FlatPos(0.),
 	)
 ]
@@ -168,8 +168,17 @@ model2 = first_model(model_params2)
 # ╔═╡ d1cdc25b-1d80-41a3-8561-9c8e187ebca3
 mle_estimate2 = optimize(model2, MLE())
 
+# ╔═╡ b1c4696f-e4c6-4006-aab6-0745879f2131
+mle_estimate2.values[:initial_phase]
+
+# ╔═╡ 53894ab6-e2c7-49cb-b6f6-7159f9bfd306
+mle_estimate2.values[:mass_quotient]
+
 # ╔═╡ 1bfa3efb-9a5c-45bd-9a79-6e2093b57f1d
 plot_garbige(model_params2, [mle_estimate2.values])
+
+# ╔═╡ 45afe5bd-fcfe-4d67-bd14-d9d607bf8724
+plot(points.day ./ 365)
 
 # ╔═╡ Cell order:
 # ╠═11decfb6-8f0a-11ee-1bf8-d3faf8756b8b
@@ -188,4 +197,7 @@ plot_garbige(model_params2, [mle_estimate2.values])
 # ╠═90bb0d33-548e-4c33-ba8c-b11926529a9c
 # ╠═995f20d1-90e1-4d74-a7e2-99c744e8eb24
 # ╠═d1cdc25b-1d80-41a3-8561-9c8e187ebca3
+# ╠═b1c4696f-e4c6-4006-aab6-0745879f2131
+# ╠═53894ab6-e2c7-49cb-b6f6-7159f9bfd306
 # ╠═1bfa3efb-9a5c-45bd-9a79-6e2093b57f1d
+# ╠═45afe5bd-fcfe-4d67-bd14-d9d607bf8724

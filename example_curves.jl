@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.29
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -15,7 +15,7 @@ begin
 	using Plots
 	using StatsPlots
 	plotlyjs()
-	Plots.theme(:juno)
+	Plots.theme(:default)
 
 	using Meshes
 	using GeoTables
@@ -34,7 +34,7 @@ md"### Визуализация направлений"
 
 # ╔═╡ 74d8becd-7529-47dd-bf4b-9b1cfe3f17de
 begin
-	mass_quotients = 0.01:0.01:10
+	mass_quotients = 0.001:0.01:10
 	interpolated_mesh = InterpolatedRocheMesh(64, mass_quotients)
 end
 
@@ -63,7 +63,30 @@ end
 # ╔═╡ 3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
 begin
 	local m = interpolated_mesh(1.)
-	f = viz(domain(m), color = values(m, 0).g)
+	f = viz(domain(m), color = values(m, 0).g, colorbar = true)
+end
+
+# ╔═╡ 73765725-9adb-4112-9fe5-9f506901c352
+begin
+	pyplot()
+	T_ticks = [2900, 3300, 3450, 3550, 3630]
+	T_ticks_labels = @. string(round(Int, T_ticks)) * "° K"
+
+	β = 0.08
+	T0 = 3500
+	g_ticks = @. (T_ticks / T0)^(1/β)
+
+	vals = 0.070128 : 0.1 : 1.71731
+
+	p = plot(
+		vals,
+		zcolor = vals,
+		colormap = :viridis,
+		colorbar_ticks = (g_ticks, T_ticks_labels)
+	)
+
+	plotlyjs()
+	p
 end
 
 # ╔═╡ 28452494-35d6-443a-8986-8c41cdc239de
@@ -72,7 +95,7 @@ begin
 	mesh = apply_function(mesh, g -> g^0.25, :g, :T)
 	mesh = apply_function(mesh, T -> T^4, :T, :L)
 
-	normals = calc_function_on_faces(mesh, normal)
+	normals = calc_function_on_faces(mesh, normalized_normal)
     areas = calc_function_on_faces(mesh, area)
 end
 
@@ -229,6 +252,12 @@ d = (1/√2, 1/√2, 0.)
 # ╔═╡ c6c9f467-d821-47e2-b2a1-fedfdb685880
 @code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, darkening_coefficients)
 
+# ╔═╡ f5dff1c4-792f-4bbd-b884-59b657ce62a2
+stack(normals)
+
+# ╔═╡ 9ef7cf71-abbf-494c-8fc4-d20842caf137
+calc_function_on_faces(mesh, normal)
+
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
 # ╠═243eae5b-8f0a-4246-8f2e-3de35bb3941a
@@ -237,6 +266,7 @@ d = (1/√2, 1/√2, 0.)
 # ╠═87a082a1-4e29-4702-acb0-35afc8e51735
 # ╠═c72dec8c-9841-45af-bb0f-c0818102fe4f
 # ╠═3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
+# ╠═73765725-9adb-4112-9fe5-9f506901c352
 # ╠═28452494-35d6-443a-8986-8c41cdc239de
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
@@ -257,3 +287,5 @@ d = (1/√2, 1/√2, 0.)
 # ╠═8f019dcc-fff8-4a7f-a15c-d5e5d507656f
 # ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
 # ╠═c6c9f467-d821-47e2-b2a1-fedfdb685880
+# ╠═f5dff1c4-792f-4bbd-b884-59b657ce62a2
+# ╠═9ef7cf71-abbf-494c-8fc4-d20842caf137

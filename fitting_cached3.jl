@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.29
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -20,7 +20,7 @@ begin
 	using Plots
 	using StatsPlots
 	plotlyjs()
-	theme(:juno)
+	theme(:default)
 
 	using LombScargle
 end
@@ -89,12 +89,13 @@ end
 function plot_garbige(model_params, samples)
 	p = plot(
 		layout = (2, 1),
-		title = ["K" "J"],
+		title = ["Спектральный канал K" "Спектральный канал J"],
 		legend = false,
 		xlabel = ["" "Julian day % period"],
 		ylabel = "Звездная величина",
 		yflip = true,
-		size = (600, 600)
+		size = (600, 600),
+		margin = 12Plots.px,
 	)
 
 	for (channel, subplot) ∈ zip(model_params.channels, p.subplots)
@@ -117,6 +118,90 @@ function plot_garbige(model_params, samples)
 		plot_line!(model_params, sample, p)
 	end
 	plot!()
+end
+
+# ╔═╡ 232ace15-13a9-4afe-9468-d6e54d796470
+function plot_rubbish(model_params, samples)
+	p = plot(
+		layout = (2, 1),
+		title = ["Спектральный канал K" "Спектральный канал J"],
+		legend = false,
+		xlabel = ["" "фаза"],
+		ylabel = "Звездная величина",
+		yflip = true,
+		size = (600, 600),
+		xlim = (-0.1, 1.1),
+		margin = 12Plots.px,
+	)
+
+	initial_phase = mean(samples[:initial_phase]) / 2π
+
+	for (channel, subplot) ∈ zip(model_params.channels, p.subplots)
+		phases = (channel.measurements_t .% model_params.period) ./ model_params.period .- initial_phase
+		scatter!(
+			subplot,
+			phases,
+			channel.measurements_y,
+			markersize = 2,
+			yerr = channel.σ_measured,
+			markercolor = 1,
+		)
+		scatter!(
+			subplot,
+			phases .+ 1,
+			channel.measurements_y,
+			markersize = 2,
+			yerr = channel.σ_measured,
+			markercolor = 1,
+		)
+		scatter!(
+			subplot,
+			phases .-1,
+			channel.measurements_y,
+			markersize = 2,
+			yerr = channel.σ_measured,
+			markercolor = 1,
+		)
+	end
+
+	phases = -0.1 : 0.01 : 1.1
+
+	for (c, (channel, subplot)) ∈ enumerate(zip(model_params.channels, p.subplots))
+		vals = Array{Float64}(undef, length(samples), length(phases))
+
+		for s ∈ 1 : length(samples)
+			sample = samples[s]
+			if isa(sample, Chains)
+				sample = get_params(sample)
+			end
+
+			vals[s, :] = star_magnitude(
+				phases .* 2π;
+				mass_quotient = sample[:mass_quotient],
+				observer_angle = sample[:observer_angle],
+				temperature_at_bottom = model_params.temperature_at_bottom,
+				interpolated_mesh,
+				β = model_params.β,
+				luminocity_function = channel.luminocity_function,
+				darkening_function = channel.darkening_function,
+				darkening_coefficients = channel.darkening_coefficients
+			)
+			vals[s, :] .+= sample[:offset][c]
+		end
+
+		means = mean(vals, dims = 1)[1, :]
+		stds = std(vals, dims = 1)[1, :]
+
+		plot!(
+			subplot,
+			phases,
+			means,
+			alpha = 0,
+			ribbon = stds,
+			color = 1
+		)
+	end
+	p
 end
 
 # ╔═╡ 960ab30d-a1fa-4803-a4d4-d0860286ba87
@@ -146,7 +231,7 @@ channels = [
 		darkening_function = claret_darkening,
 		darkening_coefficients = (1.2834, -1.4623, 1.5046, -0.5507),
 		luminocity_function = black_body_J,
-		σ_measured = points.K_err,
+		σ_measured = points.J_err,
 		σ_common = FlatPos(0.),
 	)
 ]
@@ -164,7 +249,7 @@ plot_garbige(model_params, [initial_params])
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 2000,
+	n_samples = 4096,
 	init_params = initial_params,
 	sampler = NUTS()
 )
@@ -175,22 +260,27 @@ samples = cached_sample(chain_params)
 # ╔═╡ a5070b94-48c2-4405-af78-fddd5784161e
 chain_params |> JSON3.write |> sha1 |> bytes2hex
 
-# ╔═╡ 94abc73f-8f2e-42f5-86d2-17836d645ec2
-macro get_number(symbol, parameters, sample)
-	@eval isa($parameters.$symbol, Number) ? $parameters.$symbol : $sample[symbol].data[1]
-end
-
 # ╔═╡ 174cd8b8-1d1c-4141-a170-6f978f5195e1
 begin
 	samples_ = sample(samples, 15)
 	plot_garbige(model_params, samples_)
 end
 
+# ╔═╡ 15ae4b29-3d14-4ad1-811d-de973095f25d
+plot_rubbish(model_params, samples)
+
 # ╔═╡ 45422b39-64d5-4a75-b8c0-8ba0011ba089
-plot(samples, bottom_margin = 50Plots.px)
+plot(samples, margin = 10Plots.px, bottom_margin = 50Plots.px)
 
 # ╔═╡ 61b8f08b-4252-4ea7-9b27-37771331de77
-
+scatter(
+	samples[:mass_quotient],
+	samples[:observer_angle],
+	markersize = 0.2,
+	xlabel = "Масса карлика / масса гиганта",
+	ylabel = "Наклонение (рад.)",
+	legend = false
+)
 
 # ╔═╡ Cell order:
 # ╠═36db1462-6dbf-11ee-38c4-05d52e2c894c
@@ -201,6 +291,7 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╠═2fe448f3-1744-4bbb-83e7-290a9214e7c8
 # ╠═d9b9b851-cca0-4a40-a627-7dec9c5da6c1
 # ╠═275cb92f-d5d1-4fb9-acb3-5d2317f84a2b
+# ╠═232ace15-13a9-4afe-9468-d6e54d796470
 # ╠═960ab30d-a1fa-4803-a4d4-d0860286ba87
 # ╠═00044db4-b168-44be-9d39-87d27b7d330d
 # ╠═30a74a85-c431-469c-bf3d-00190db36c56
@@ -209,7 +300,7 @@ plot(samples, bottom_margin = 50Plots.px)
 # ╠═eda9134f-b918-42f0-bcfc-e0d601eeeaad
 # ╠═33b862f3-dc6a-46fe-b73e-a7df7af22e92
 # ╠═a5070b94-48c2-4405-af78-fddd5784161e
-# ╠═94abc73f-8f2e-42f5-86d2-17836d645ec2
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
+# ╠═15ae4b29-3d14-4ad1-811d-de973095f25d
 # ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
 # ╠═61b8f08b-4252-4ea7-9b27-37771331de77
