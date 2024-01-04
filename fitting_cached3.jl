@@ -28,6 +28,12 @@ end
 # ╔═╡ 33b862f3-dc6a-46fe-b73e-a7df7af22e92
 using JSON3, SHA
 
+# ╔═╡ 234e80df-af67-44ad-8f06-3c3d403dcd25
+using KernelDensity
+
+# ╔═╡ 360119a3-9cba-4e40-ad6c-88a0be627b1e
+using Roots
+
 # ╔═╡ b8bda58e-9ed2-4da0-a67a-6d5990e7389d
 begin
 	points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
@@ -282,6 +288,53 @@ scatter(
 	legend = false
 )
 
+# ╔═╡ fcff208a-6eea-475b-8cee-908457bbc1d3
+k = kde((samples[:mass_quotient].data[:, 1], samples[:observer_angle].data[:, 1]))
+
+# ╔═╡ 46a12905-4167-4f7e-92a6-6a633903f7e9
+function get_threshold(kde, confidence_level)
+	total = sum(kde.density)
+	function percentage(threshold)
+		return sum(filter(pdf -> pdf > threshold, kde.density)) / total
+	end
+	return find_zero(
+		threshold -> percentage(threshold) - confidence_level,
+		extrema(kde.density),
+	)
+end
+
+# ╔═╡ dedc4007-cf2e-49ac-860f-b6b27cd2be05
+labels_ = [0.75, 0.5, 0.25]
+
+# ╔═╡ f5bccc4e-aefe-4bc7-a6c2-da3de047b5d4
+thresholds = get_threshold.(Ref(k), labels_)
+
+# ╔═╡ 5d7caa39-2328-4e12-805b-3438ce74faa8
+import PyPlot
+
+# ╔═╡ 072d2ba5-4bf8-4d9d-8165-38bcbfe8cd82
+PyPlot.svg(true)
+
+# ╔═╡ 92ea93cb-1370-4a9d-8041-253c99d72dae
+begin
+	PyPlot.gcf().clear()
+
+	PyPlot.gca().set_xlim(0, 3)
+	PyPlot.gca().set_ylim(0.85, 1.2)
+	PyPlot.gca().set_xlabel("Масса карлика / масса гиганта")
+	PyPlot.gca().set_ylabel("Наклонение (рад.)")
+
+	cs = PyPlot.contour(
+		k.x, k.y, k.density',
+		levels = thresholds
+	)
+	PyPlot.clabel(cs, fmt = Dict(zip(
+		thresholds,
+		@. string(Int(labels_ * 100)) * " %"
+	)))
+	PyPlot.gcf()
+end
+
 # ╔═╡ Cell order:
 # ╠═36db1462-6dbf-11ee-38c4-05d52e2c894c
 # ╠═b8bda58e-9ed2-4da0-a67a-6d5990e7389d
@@ -304,3 +357,12 @@ scatter(
 # ╠═15ae4b29-3d14-4ad1-811d-de973095f25d
 # ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
 # ╠═61b8f08b-4252-4ea7-9b27-37771331de77
+# ╠═234e80df-af67-44ad-8f06-3c3d403dcd25
+# ╠═360119a3-9cba-4e40-ad6c-88a0be627b1e
+# ╠═fcff208a-6eea-475b-8cee-908457bbc1d3
+# ╠═46a12905-4167-4f7e-92a6-6a633903f7e9
+# ╠═dedc4007-cf2e-49ac-860f-b6b27cd2be05
+# ╠═f5bccc4e-aefe-4bc7-a6c2-da3de047b5d4
+# ╠═5d7caa39-2328-4e12-805b-3438ce74faa8
+# ╠═072d2ba5-4bf8-4d9d-8165-38bcbfe8cd82
+# ╠═92ea93cb-1370-4a9d-8041-253c99d72dae
