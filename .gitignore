@@ -7,3 +7,14 @@ _*
 .vscode
 cache
 J_A+A_363_1081
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.run.xml
+*.bcf
