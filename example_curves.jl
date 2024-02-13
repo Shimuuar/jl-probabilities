@@ -82,12 +82,16 @@ begin
 		vals,
 		zcolor = vals,
 		colormap = :viridis,
-		colorbar_ticks = (g_ticks, T_ticks_labels)
+		colorbar_ticks = (g_ticks, T_ticks_labels),
+		format = :svg
 	)
 
 	plotlyjs()
 	p
 end
+
+# ╔═╡ adc2a88e-e445-4b5b-8346-7abc93aa4cec
+
 
 # ╔═╡ 28452494-35d6-443a-8986-8c41cdc239de
 begin
@@ -252,12 +256,6 @@ d = (1/√2, 1/√2, 0.)
 # ╔═╡ c6c9f467-d821-47e2-b2a1-fedfdb685880
 @code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, darkening_coefficients)
 
-# ╔═╡ f5dff1c4-792f-4bbd-b884-59b657ce62a2
-stack(normals)
-
-# ╔═╡ 9ef7cf71-abbf-494c-8fc4-d20842caf137
-calc_function_on_faces(mesh, normal)
-
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
 # ╠═243eae5b-8f0a-4246-8f2e-3de35bb3941a
@@ -267,6 +265,7 @@ calc_function_on_faces(mesh, normal)
 # ╠═c72dec8c-9841-45af-bb0f-c0818102fe4f
 # ╠═3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
 # ╠═73765725-9adb-4112-9fe5-9f506901c352
+# ╠═adc2a88e-e445-4b5b-8346-7abc93aa4cec
 # ╠═28452494-35d6-443a-8986-8c41cdc239de
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
@@ -287,5 +286,3 @@ calc_function_on_faces(mesh, normal)
 # ╠═8f019dcc-fff8-4a7f-a15c-d5e5d507656f
 # ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
 # ╠═c6c9f467-d821-47e2-b2a1-fedfdb685880
-# ╠═f5dff1c4-792f-4bbd-b884-59b657ce62a2
-# ╠═9ef7cf71-abbf-494c-8fc4-d20842caf137

@@ -34,6 +34,9 @@ using KernelDensity
 # ╔═╡ 360119a3-9cba-4e40-ad6c-88a0be627b1e
 using Roots
 
+# ╔═╡ 3b39b5a4-6cb1-4b80-9d13-730f6a797fd8
+using Optim
+
 # ╔═╡ b8bda58e-9ed2-4da0-a67a-6d5990e7389d
 begin
 	points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
@@ -60,6 +63,9 @@ begin
 	estimated_period = 2findmaxperiod(pgram)[1]
 	findmaxperiod(pgram)
 end
+
+# ╔═╡ 7e8b804f-b511-4359-8c44-286743a2ff9b
+estimated_period
 
 # ╔═╡ 2fe448f3-1744-4bbb-83e7-290a9214e7c8
 interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
@@ -143,7 +149,7 @@ function plot_rubbish(model_params, samples)
 	initial_phase = mean(samples[:initial_phase]) / 2π
 
 	for (channel, subplot) ∈ zip(model_params.channels, p.subplots)
-		phases = (channel.measurements_t .% model_params.period) ./ model_params.period .- initial_phase
+		phases = (channel.measurements_t .% model_params.period) ./ model_params.period .+ initial_phase
 		scatter!(
 			subplot,
 			phases,
@@ -278,6 +284,32 @@ plot_rubbish(model_params, samples)
 # ╔═╡ 45422b39-64d5-4a75-b8c0-8ba0011ba089
 plot(samples, margin = 10Plots.px, bottom_margin = 50Plots.px)
 
+# ╔═╡ 43973ad5-74c8-4bb7-92c2-372e6fb722dd
+density(
+	1 ./ samples[:mass_quotient],
+	title = "Масса гиганта / масса карлика",
+	legend = false,
+	size = (600, 300),
+	xlim = (0, 2)
+)
+
+# ╔═╡ 8ec7dad5-b377-43df-8a7f-ad8c9179d7e2
+density(
+	samples[:initial_phase] ./ 2π,
+	title = "Начальная фаза (в долях периода)",
+	legend = false,
+	size = (600, 300),
+	xlim = (-0.265, -0.23)
+)
+
+# ╔═╡ 9a192e6e-f8ac-48fc-a7c3-7cbc5ebe7554
+density(
+	samples[:observer_angle] ./ π .* 180,
+	title = "Наклонение (°)",
+	legend = false,
+	size = (600, 300),
+)
+
 # ╔═╡ 61b8f08b-4252-4ea7-9b27-37771331de77
 scatter(
 	samples[:mass_quotient],
@@ -289,7 +321,10 @@ scatter(
 )
 
 # ╔═╡ fcff208a-6eea-475b-8cee-908457bbc1d3
-k = kde((samples[:mass_quotient].data[:, 1], samples[:observer_angle].data[:, 1]))
+k = kde((
+	1 ./ samples[:mass_quotient].data[:, 1],
+	samples[:observer_angle].data[:, 1] .* 180 ./ π
+))
 
 # ╔═╡ 46a12905-4167-4f7e-92a6-6a633903f7e9
 function get_threshold(kde, confidence_level)
@@ -304,7 +339,10 @@ function get_threshold(kde, confidence_level)
 end
 
 # ╔═╡ dedc4007-cf2e-49ac-860f-b6b27cd2be05
-labels_ = [0.75, 0.5, 0.25]
+labels_ = [0.95, 0.68, 0.38]
+
+# ╔═╡ 230396d1-c1ce-4b71-a533-ceb745392393
+text_lavels = @. string(Int(labels_ * 100)) * "%"
 
 # ╔═╡ f5bccc4e-aefe-4bc7-a6c2-da3de047b5d4
 thresholds = get_threshold.(Ref(k), labels_)
@@ -315,23 +353,52 @@ import PyPlot
 # ╔═╡ 072d2ba5-4bf8-4d9d-8165-38bcbfe8cd82
 PyPlot.svg(true)
 
-# ╔═╡ 92ea93cb-1370-4a9d-8041-253c99d72dae
+# ╔═╡ 4693a488-e017-46a8-b077-cffd3b20303e
+function i(q; m = 1.44)
+	rad2deg(asin(cbrt(0.322408 / m * (1 + q)^2)))
+end
+
+# ╔═╡ d6d41a41-6528-49b2-bf52-3f80542f9dc0
+begin
+	local q = 0 : 0.01 : 1.05
+	plot(q, i.(q))
+	plot!(q, i.(q, m = 1.41))
+end
+
+# ╔═╡ 439fba04-2fd8-47ef-b34c-d0b63d9508ce
+i(1.113)
+
+# ╔═╡ 4cead2e8-2caf-486b-8a5d-990815b88ab9
+begin
+	local q = 0 : 0.01 : 1.05
+	PyPlot.plot(q, i.(q))
+	PyPlot.gcf()
+end
+
+# ╔═╡ fc855167-775a-4688-adbc-93625d72c3cd
+mx = maximize(x -> pdf(k, x[1], x[2]), [1., 60.])
+
+# ╔═╡ a5f25a95-d00f-4cc9-b93e-f02efc812e9d
+max_point = Optim.maximizer(mx)
+
+# ╔═╡ 58497ce3-5b59-4473-b3c3-9ddea6de1cb9
 begin
 	PyPlot.gcf().clear()
 
-	PyPlot.gca().set_xlim(0, 3)
-	PyPlot.gca().set_ylim(0.85, 1.2)
-	PyPlot.gca().set_xlabel("Масса карлика / масса гиганта")
-	PyPlot.gca().set_ylabel("Наклонение (рад.)")
+	PyPlot.gca().set_xlim(0, 1.8)
+	PyPlot.gca().set_ylim(42, 70)
+	PyPlot.gca().set_xlabel("Масса гиганта / масса карлика")
+	PyPlot.gca().set_ylabel("Наклонение (°)")
 
-	cs = PyPlot.contour(
+	local cs = PyPlot.contour(
 		k.x, k.y, k.density',
 		levels = thresholds
 	)
 	PyPlot.clabel(cs, fmt = Dict(zip(
 		thresholds,
-		@. string(Int(labels_ * 100)) * " %"
+		text_lavels
 	)))
+	PyPlot.scatter([max_point[1]], [max_point[2]])
 	PyPlot.gcf()
 end
 
@@ -341,6 +408,7 @@ end
 # ╠═e28e8c98-caa0-41c0-bb15-53c6679dda6d
 # ╠═55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
 # ╠═5b2930bc-2de0-4388-824a-190d1169cbfe
+# ╠═7e8b804f-b511-4359-8c44-286743a2ff9b
 # ╠═2fe448f3-1744-4bbb-83e7-290a9214e7c8
 # ╠═d9b9b851-cca0-4a40-a627-7dec9c5da6c1
 # ╠═275cb92f-d5d1-4fb9-acb3-5d2317f84a2b
@@ -356,13 +424,24 @@ end
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
 # ╠═15ae4b29-3d14-4ad1-811d-de973095f25d
 # ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
+# ╠═43973ad5-74c8-4bb7-92c2-372e6fb722dd
+# ╠═8ec7dad5-b377-43df-8a7f-ad8c9179d7e2
+# ╠═9a192e6e-f8ac-48fc-a7c3-7cbc5ebe7554
 # ╠═61b8f08b-4252-4ea7-9b27-37771331de77
 # ╠═234e80df-af67-44ad-8f06-3c3d403dcd25
 # ╠═360119a3-9cba-4e40-ad6c-88a0be627b1e
 # ╠═fcff208a-6eea-475b-8cee-908457bbc1d3
 # ╠═46a12905-4167-4f7e-92a6-6a633903f7e9
 # ╠═dedc4007-cf2e-49ac-860f-b6b27cd2be05
+# ╠═230396d1-c1ce-4b71-a533-ceb745392393
 # ╠═f5bccc4e-aefe-4bc7-a6c2-da3de047b5d4
 # ╠═5d7caa39-2328-4e12-805b-3438ce74faa8
 # ╠═072d2ba5-4bf8-4d9d-8165-38bcbfe8cd82
-# ╠═92ea93cb-1370-4a9d-8041-253c99d72dae
+# ╠═58497ce3-5b59-4473-b3c3-9ddea6de1cb9
+# ╠═4693a488-e017-46a8-b077-cffd3b20303e
+# ╠═d6d41a41-6528-49b2-bf52-3f80542f9dc0
+# ╠═439fba04-2fd8-47ef-b34c-d0b63d9508ce
+# ╠═4cead2e8-2caf-486b-8a5d-990815b88ab9
+# ╠═3b39b5a4-6cb1-4b80-9d13-730f6a797fd8
+# ╠═fc855167-775a-4688-adbc-93625d72c3cd
+# ╠═a5f25a95-d00f-4cc9-b93e-f02efc812e9d
