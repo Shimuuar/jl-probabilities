@@ -210,8 +210,9 @@ end
 - darkening_coefficients — коэффициенты потемнения к краю
 """
 function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, normals, areas,
-                                  darkening_function, darkening_coefficients)
+                                  darkening_function, darkening_coefs_interpolant)
     vertices_values = getfield(values(geo_table, 0), field_name)
+    temperature_values = getfield(values(geo_table, 0), :T)
 
     connections = faces(topology(domain(geo_table)), 2)
 
@@ -221,7 +222,8 @@ function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, no
             return zero(cosine)
         else
             val = avg_over_face(vertices_values, connection)
-            darkening = darkening_function(cosine, darkening_coefficients...)
+            T = avg_over_face(temperature_values, connection)
+            darkening = darkening_function(cosine, darkening_coefs_interpolant(T)...)
             return cosine * A * val * darkening
         end
     end

@@ -339,7 +339,7 @@ function get_threshold(kde, confidence_level)
 end
 
 # ╔═╡ dedc4007-cf2e-49ac-860f-b6b27cd2be05
-labels_ = [0.95, 0.68, 0.38]
+labels_ = [0.95, 0.68, 0]#, 0.38]
 
 # ╔═╡ 230396d1-c1ce-4b71-a533-ceb745392393
 text_lavels = @. string(Int(labels_ * 100)) * "%"
@@ -358,6 +358,16 @@ function i(q; m = 1.44)
 	rad2deg(asin(cbrt(0.322408 / m * (1 + q)^2)))
 end
 
+# ╔═╡ 02435262-6c25-427f-9de6-b5251067eccb
+samples_filtered = filter(DataFrame(samples)) do sample
+	try
+		i_min = i(1 / sample[:mass_quotient])
+		return i_min < rad2deg(sample[:observer_angle])
+	catch DomainError
+		return false
+	end
+end
+
 # ╔═╡ d6d41a41-6528-49b2-bf52-3f80542f9dc0
 begin
 	local q = 0 : 0.01 : 1.05
@@ -371,9 +381,18 @@ i(1.113)
 # ╔═╡ 4cead2e8-2caf-486b-8a5d-990815b88ab9
 begin
 	local q = 0 : 0.01 : 1.05
-	PyPlot.plot(q, i.(q))
+	PyPlot.plot(q, i.(q), color = "black", linestyle = "dashed")
 	PyPlot.gcf()
 end
+
+# ╔═╡ 7eb4f613-beed-47a3-995a-c16b7219e597
+Dict(zip(
+		thresholds,
+		text_lavels
+	))
+
+# ╔═╡ 76cc35b4-d81c-4ab6-ac3e-c0f4ada37de8
+
 
 # ╔═╡ fc855167-775a-4688-adbc-93625d72c3cd
 mx = maximize(x -> pdf(k, x[1], x[2]), [1., 60.])
@@ -400,6 +419,72 @@ begin
 	)))
 	PyPlot.scatter([max_point[1]], [max_point[2]])
 	PyPlot.gcf()
+end
+
+# ╔═╡ ad9d27f1-3fce-4cb1-bcb4-487d3f91c344
+k_filtered = kde((
+	1 ./ samples_filtered.mass_quotient,
+	samples_filtered.observer_angle .* 180 ./ π
+))
+
+# ╔═╡ 9369dee7-b21f-4afc-929b-7633fe80f3af
+mx_filtered = maximize(x -> pdf(k_filtered, x[1], x[2]), [0.5, 50.])
+
+# ╔═╡ 65375d07-0d16-454f-97d7-822aa55e9c84
+max_point_filtered = Optim.maximizer(mx_filtered)
+
+# ╔═╡ b34c8f5d-c125-4ebf-aec0-9b37d5432dc8
+thresholds_filtered = get_threshold.(Ref(k_filtered), labels_)
+
+# ╔═╡ af369c17-81b1-47bc-ae3d-af7212a34afb
+begin
+	PyPlot.gcf().clear()
+
+	# PyPlot.gca().set_xlim(0, 1.8)
+	# PyPlot.gca().set_ylim(42, 70)
+	PyPlot.gca().set_xlabel("Масса гиганта / масса карлика")
+	PyPlot.gca().set_ylabel("Наклонение (°)")
+
+	local cs = PyPlot.contour(
+		k_filtered.x, k_filtered.y, k_filtered.density',
+		levels = thresholds_filtered
+	)
+	PyPlot.clabel(cs, fmt = Dict(zip(
+		thresholds_filtered,
+		text_lavels
+	)))
+	PyPlot.scatter([max_point_filtered[1]], [max_point_filtered[2]])
+
+	local q = 0 : 0.01 : 0.8
+	PyPlot.plot(q, i.(q))
+	PyPlot.gcf()
+end
+
+# ╔═╡ b5cf0296-5308-42f0-b9b4-0f2d7ba0c0c0
+begin
+	scatter(
+		1 ./ samples_filtered.mass_quotient,
+		rad2deg.(samples_filtered.observer_angle),
+	)
+	local q = 0.1 : 0.01 : 0.7
+	plot!(q, i.(q), legend = false)
+end
+
+# ╔═╡ 60edb60f-8951-4d92-8395-c99d808b9e29
+density(1 ./ samples_filtered.mass_quotient, xlabel = "Масса гиганта / масса карлика")
+
+# ╔═╡ 2c22988c-b0c4-4003-a1d9-5f902d31c980
+dwarf_mass(q, i) = 0.322408 * (1 + q)^2 / sin(i)^3
+
+# ╔═╡ 2a7073d9-afb1-4d08-a76e-fb88248e4a26
+begin
+	dwarf_masses = dwarf_mass.(1 ./ samples_filtered.mass_quotient, samples_filtered.observer_angle)
+
+	giant_masses = dwarf_masses ./ samples_filtered.mass_quotient
+
+	scatter(dwarf_masses, giant_masses, markersize = 1)
+
+	#plot!(xlim = (0., 1.45), ylim = (0, 1))
 end
 
 # ╔═╡ Cell order:
@@ -430,6 +515,7 @@ end
 # ╠═61b8f08b-4252-4ea7-9b27-37771331de77
 # ╠═234e80df-af67-44ad-8f06-3c3d403dcd25
 # ╠═360119a3-9cba-4e40-ad6c-88a0be627b1e
+# ╠═02435262-6c25-427f-9de6-b5251067eccb
 # ╠═fcff208a-6eea-475b-8cee-908457bbc1d3
 # ╠═46a12905-4167-4f7e-92a6-6a633903f7e9
 # ╠═dedc4007-cf2e-49ac-860f-b6b27cd2be05
@@ -442,6 +528,17 @@ end
 # ╠═d6d41a41-6528-49b2-bf52-3f80542f9dc0
 # ╠═439fba04-2fd8-47ef-b34c-d0b63d9508ce
 # ╠═4cead2e8-2caf-486b-8a5d-990815b88ab9
+# ╠═7eb4f613-beed-47a3-995a-c16b7219e597
+# ╠═76cc35b4-d81c-4ab6-ac3e-c0f4ada37de8
 # ╠═3b39b5a4-6cb1-4b80-9d13-730f6a797fd8
 # ╠═fc855167-775a-4688-adbc-93625d72c3cd
+# ╠═9369dee7-b21f-4afc-929b-7633fe80f3af
 # ╠═a5f25a95-d00f-4cc9-b93e-f02efc812e9d
+# ╠═65375d07-0d16-454f-97d7-822aa55e9c84
+# ╠═ad9d27f1-3fce-4cb1-bcb4-487d3f91c344
+# ╠═b34c8f5d-c125-4ebf-aec0-9b37d5432dc8
+# ╠═af369c17-81b1-47bc-ae3d-af7212a34afb
+# ╠═b5cf0296-5308-42f0-b9b4-0f2d7ba0c0c0
+# ╠═60edb60f-8951-4d92-8395-c99d808b9e29
+# ╠═2c22988c-b0c4-4003-a1d9-5f902d31c980
+# ╠═2a7073d9-afb1-4d08-a76e-fb88248e4a26

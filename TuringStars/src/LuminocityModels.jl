@@ -126,7 +126,7 @@ StructTypes.StructType(::typeof(first_model)) = StructTypes.StringType()
 
 function star_magnitude(phases; mass_quotient, observer_angle,
                         temperature_at_bottom, β, interpolated_mesh,
-                        luminocity_function, darkening_function, darkening_coefficients)
+                        luminocity_function, darkening_function, darkening_coefs_interpolant)
 
     directions = [(
         sin(observer_angle) * cos(phase),
@@ -146,7 +146,7 @@ function star_magnitude(phases; mass_quotient, observer_angle,
     areas = calc_function_on_faces(mesh, area)
 
     luminocities = [
-        integrate_data_over_mesh(mesh, :L, direction, normals, areas, darkening_function, darkening_coefficients)
+        integrate_data_over_mesh(mesh, :L, direction, normals, areas, darkening_function, darkening_coefs_interpolant)
         for direction ∈ directions
     ]
     return @. -2.5 * log10(luminocities)
