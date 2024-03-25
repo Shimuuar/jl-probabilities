@@ -5,6 +5,7 @@
 \usepackage{csquotes} % иначе babel делает ворнинг
 \usepackage{ragged2e}
 \usepackage[hidelinks]{hyperref}
+\usepackage{subfig}
 
 
 \begin{document}
@@ -220,7 +221,52 @@ K(\log g, \log T_\text{eff}) = K_0
 \[
 \beta \approx 0.08
 \]
+Именно это значение используется в настоящей работе.
 
+
+\parag{Коэффициент Кларета}
+
+Полученные выше законы $T_\text{eff} \sim g^{1/4}$ и $T_\text{eff} \sim g^{0.08}$ относится к болометрической светимости.
+Но наблюдения, как правило, производятся в некоторой узкой полосе длин волн, причем спектр реальных звёзд далек от чернотельного.
+
+Поэтому Антоний Кларет предлагает \cite{ClaretGravity} ввести коэффициент $y(\lambda)$, по определению равный
+\begin{equation}
+y(\lambda)
+\coloneq \brk*{
+    \frac{\partial \ln I(\lambda)}{\partial \ln g}
+}_{T_\text{eff}}
++\brk*{
+    \frac{\partial \ln I(\lambda)}{\partial \ln T_\text{eff}}
+}_g
+\brk3{
+    \underbrace{
+        \frac{d \ln T_\text{eff}}{d \ln g}
+    }_{\beta}
+}
+\label{eq:ClaretGravity}
+\end{equation}
+где $I(\lambda)$ --- интенсивность излучения в полосе $\lambda$.
+
+Кларет вычислил $y(\lambda)$ численно, используя модели ATLAS и PHOENIX. Оказалось, что $y(\lambda)$ зависит от эффективной температуры, гравитации и скорости микротурбулентности.
+
+На рис. \ref{fig:ClaretGravity} показаны примеры полученных зависимостей для инфракрасных фильтров $J$ и $K$.
+
+\begin{figure}[h]
+\vspace{0.4em}
+\centering
+\subfloat{
+    \includegraphics[height=0.4\textwidth]{pics/Claret GDC J.png}
+}
+\subfloat{
+    \includegraphics[height=0.4\textwidth]{pics/Claret GDC K.png}
+}
+\caption{Коэффициент гравитационного потемнения \eqref{eq:ClaretGravity} для фильтров $J$ и $K$ в зависимости от эффективной температуры.
+Звёздочками обозначена модель абсолютно черного тела, сплошной линией --- модель ATLAS, пунктирной --- PHOENIX. Параметры моделей: $\log g = 4.0$ см/с+2, $v_\text{mic} = 2$ км/с, металличность $\log [\text{M}/\text{H}] = 0.0$.
+Изображения взяты из \cite{ClaretGravity}}.
+\label{fig:ClaretGravity}
+\end{figure}
+
+Данный подход, хоть и является более правильным, не очень полезен для настоящей работы. Он позволяет вычислить производную интенсивности по гравитации при определенной температуре, но не позволяет напрямую получить распределение температур по поверхности звезды. Поэтому мы будем использовать простой закон $T_\text{eff} \sim g^{0.08}$.
 
 \showbib
 
