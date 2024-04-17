@@ -29,7 +29,7 @@ end
     measurements_t::Vector{Float64}
     measurements_y::Vector{Float64}
     darkening_function = one1
-    darkening_coefficients = ()
+    darkening_coefs_interpolant = T -> ()
     luminocity_function = T_4
     σ_measured::Vector{Float64}
     σ_common::Union{Float64, Distribution} = 0.
@@ -105,7 +105,7 @@ function first_model(model_params)
                 interpolated_mesh,
                 channel.luminocity_function,
                 channel.darkening_function,
-                channel.darkening_coefficients
+                channel.darkening_coefs_interpolant
             )
 
             predicted_magnitudes .+= offset[i]
@@ -139,14 +139,16 @@ function star_magnitude(phases; mass_quotient, observer_angle,
     end
 
     mesh = interpolated_mesh(mass_quotient)
+    mesh = avg_over_faces(mesh, :g)
     mesh = apply_function(mesh, temperature, :g, :T)
     mesh = apply_function(mesh, luminocity_function, :T, :L)
+    mesh = apply_function(mesh, darkening_coefs_interpolant, :T, :darkening_coefs)
 
     normals = calc_function_on_faces(mesh, normalized_normal)
     areas = calc_function_on_faces(mesh, area)
 
     luminocities = [
-        integrate_data_over_mesh(mesh, :L, direction, normals, areas, darkening_function, darkening_coefs_interpolant)
+        integrate_data_over_mesh(mesh, :L, direction, normals, areas, darkening_function)
         for direction ∈ directions
     ]
     return @. -2.5 * log10(luminocities)

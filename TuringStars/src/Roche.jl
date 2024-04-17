@@ -19,6 +19,7 @@ export
     integrate_data_over_mesh,
     integrate_data_over_mesh2,
     apply_function,
+    avg_over_faces,
     calc_function_on_faces,
     luminocity_at_point,
     normalized_normal
@@ -172,7 +173,11 @@ end
 
 
 """
-Meshes.GeoTable, содержащая сетку полости Роша при данном соотношении масс и значения |g| в каждой точке, нормированные на значение |g| в точке (x, y, z) = (-1, 0, 0).
+Meshes.GeoTable, содержащая:
+* сетку полости Роша при данном соотношении масс,
+* значения |g| в каждой точке, нормированные на значение |g| в точке (x, y, z) = (-1, 0, 0),
+* значения T = abs(g)^β в каждой грани,
+
 """
 function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
     points = vertices(interpolated_mesh.spherical_mesh)
@@ -181,7 +186,7 @@ function (interpolated_mesh::InterpolatedRocheMesh)(mass_quotient)
     g_list = mass_quotient .|> interpolated_mesh.g_interpolants
 
     new_points = [
-        Point(coordinates(point) .* r)
+        Point(coordinates(point) .* r...)
         for (point, r) ∈ zip(points, r_list)
     ]
     new_mesh = SimpleMesh(
@@ -201,32 +206,54 @@ end
 """
 Интеграл по сетке.
 Аргументы:
-- geo_table::Meshes.GeoTable — сетка
-- field_name — имя поля, под которым в вершинах geo_table хранятся значения, которые нужно интегрировать
+- geo_table::Meshes.GeoTable — сетка; должна хранить коэффициенты потемнения к краю для каждой грани: 2 => :darkening_coefs
+- field_name — имя поля, под которым в гранях geo_table хранятся значения, которые нужно интегрировать
 - direction — направление на наблюдателя
 - normals — предварительно вычисленные внешние нормали к граням сетки
 - areas — предварительно вычисленные площади граней
 - darkening_function — функция потемнения к краю, вызываемая как darkening_function(cosine, darkening_coefficients...)
-- darkening_coefficients — коэффициенты потемнения к краю
 """
 function integrate_data_over_mesh(geo_table::GeoTable, field_name, direction, normals, areas,
-                                  darkening_function, darkening_coefs_interpolant)
-    vertices_values = getfield(values(geo_table, 0), field_name)
-    temperature_values = getfield(values(geo_table, 0), :T)
+                                  darkening_function)
+    faces_values = getfield(values(geo_table, 2), field_name)
+    darkening_coefs = getfield(values(geo_table, 2), :darkening_coefs)
 
-    connections = faces(topology(domain(geo_table)), 2)
-
-    sum(zip(connections, normals, areas)) do (connection, n, A)
+    sum(zip(faces_values, darkening_coefs, normals, areas)) do (val, darkening_coef, n, A)
         cosine = n ⋅ direction
         if cosine < 0
             return zero(cosine)
         else
-            val = avg_over_face(vertices_values, connection)
-            T = avg_over_face(temperature_values, connection)
-            darkening = darkening_function(cosine, darkening_coefs_interpolant(T)...)
+            darkening = darkening_function(cosine, darkening_coef...)
             return cosine * A * val * darkening
         end
     end
+end
+
+
+"""
+Применяет функцию к значениям, которые лежат в гранях GeoTable, и возвращает новую GeoTable c добавленным полем результатов.
+"""
+function apply_function(geo_table::GeoTable, f, arg_field_name, result_field_name, dim=2)
+    data = getfield(geo_table, :values)
+
+    f_list = f.(getfield(data[dim], arg_field_name))
+
+    data = merge_at(dim, data, result_field_name, f_list)
+
+    return GeoTable(domain(geo_table), data)
+end
+
+"""
+Добавить Dict(dim => (field_name = array,)) к data.
+"""
+function merge_at(dim, data, field_name, array)
+    data_dim = get(data, dim, NamedTuple())
+    data_dim = merge(
+        data_dim,
+        NamedTuple{(field_name,)}((array,))
+    )
+    data = merge(data, Dict(dim => data_dim))
+    return data
 end
 
 
@@ -243,15 +270,16 @@ end
 
 
 """
-Применяет функцию к значениям, которые лежат в вершинах GeoTable, и возвращает новую GeoTable c добавленным полем результатов.
+Усредняет значения по граням и записывает их в GeoTable.
 """
-function apply_function(geo_table::GeoTable, f, arg_field_name, result_field_name, dim=0)
+function avg_over_faces(geo_table::GeoTable, field_name, dim=2)
+    vertices_values = getfield(values(geo_table, 0), field_name)
+    connections = faces(topology(domain(geo_table)), dim)
+    faces_values = map(connections) do connection
+        avg_over_face(vertices_values, connection)
+    end
     data = getfield(geo_table, :values)
-
-    f_list = f.(getfield(data[dim], arg_field_name))
-
-    data = merge(merge, data, Dict(dim => (result_field_name => f_list,)))
-
+    data = merge_at(dim, data, field_name, faces_values)
     return GeoTable(domain(geo_table), data)
 end
 

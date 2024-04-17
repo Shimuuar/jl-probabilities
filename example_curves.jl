@@ -63,48 +63,21 @@ end
 # ╔═╡ 3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
 begin
 	m = interpolated_mesh(1.)
+	m = avg_over_faces(m, :g)
 	m = apply_function(m, g -> g^0.08, :g, :T)
-	f = viz(domain(m), color = values(m, 0).T, colorbar = true)
+	f = viz(domain(m), color = values(m, 2).T, showfacets = true)
+	# cbar(f, values(m, 0).T)
 end
 
-# ╔═╡ f6bdb017-9f95-4d59-aac3-b7651947e531
-maximum(values(m, 0).T)*3500
-
-# ╔═╡ 23a72616-d49d-4389-989b-590f01bf057d
-minimum(values(m, 0).T)*3500
-
-# ╔═╡ 73765725-9adb-4112-9fe5-9f506901c352
+# ╔═╡ 692e28c0-ca1a-4186-8009-342a2e4efdb0
 begin
-	pyplot()
-	T_ticks = [2900, 3300, 3450, 3550, 3630]
-	T_ticks_labels = @. string(round(Int, T_ticks)) * "° K"
-
-	β = 0.08
-	T0 = 3500
-	g_ticks = @. (T_ticks / T0)^(1/β)
-
-	vals = 0.070128 : 0.1 : 1.71731
-
-	p = plot(
-		vals,
-		zcolor = vals,
+	local temperatures = values(m, 2).T .* 3500.
+	plot(
+		temperatures,
+		zcolor = temperatures,
 		colormap = :viridis,
-		colorbar_ticks = (g_ticks, T_ticks_labels),
 		format = :svg
 	)
-
-	plotlyjs()
-	p
-end
-
-# ╔═╡ 28452494-35d6-443a-8986-8c41cdc239de
-begin
-	mesh = interpolated_mesh(1)
-	mesh = apply_function(mesh, g -> g^0.08, :g, :T)
-	mesh = apply_function(mesh, T -> T^4, :T, :L)
-
-	normals = calc_function_on_faces(mesh, normalized_normal)
-    areas = calc_function_on_faces(mesh, area)
 end
 
 # ╔═╡ 1f6a872e-5411-47e7-a642-97e9180af6c7
@@ -122,8 +95,8 @@ params = (;
 	interpolated_mesh,
 	luminocity_function = black_body_K,
     darkening_function = claret_darkening,
-    # darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272)
-	darkening_coefs_interpolant = K_coefs_interpolant
+	# darkening_coefs_interpolant = K_coefs_interpolant,
+	darkening_coefs_interpolant = T -> (1.3113, -1.2998, 1.0144, -0.3272),
 )
 
 # ╔═╡ 08d08b9d-f632-49f6-8df6-c39d35b7dc27
@@ -136,12 +109,12 @@ begin
 	)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = black_body_K) .+ 0.02,
+		star_magnitude(phases; params..., luminocity_function = black_body_K) .+ 0.015,
 		label = "∫planck(λ, T) dλ"
 	)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = T_4) .+ 23.256,
+		star_magnitude(phases; params..., luminocity_function = T_4) .+ 22.4,
 		label = "T^4"
 	)
 	
@@ -149,18 +122,26 @@ end
 
 # ╔═╡ 878919d1-66ad-4ff4-9832-2fbb197ac01f
 begin
-	plot( xlabel = "phase", ylabel = "m", yflip = true)
+	plot(xlabel = "phase", ylabel = "m", yflip = true)
+	magnitudes = star_magnitude(phases; params..., temperature_at_bottom = 2000)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = black_body_K, temperature_at_bottom = 2000),
+		magnitudes .- magnitudes[1],
+		label = "T_bottom = 2000"
 	)
+
+	magnitudes = star_magnitude(phases; params..., temperature_at_bottom = 3000)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = black_body_K, temperature_at_bottom = 3000) .+ 1.22,
+		magnitudes .- magnitudes[1],
+		label = "T_bottom = 3000"
 	)
+
+	magnitudes = star_magnitude(phases; params..., temperature_at_bottom = 4000)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = black_body_K, temperature_at_bottom = 4000) .+ 1.89,
+		magnitudes .- magnitudes[1],
+		label = "T_bottom = 4000"
 	)
 	
 end
@@ -171,7 +152,7 @@ begin
 	for q ∈ [0.1, 0.2, 0.4, 0.8, 1.6, 3.2]
 		plot!(
 			phases,
-			star_magnitude(phases; params..., mass_quotient = q),
+			star_magnitude(phases; params..., mass_quotient = q, observer_angle = pi/3),
 			label = "q = $q"
 		)
 	end
@@ -193,13 +174,6 @@ end
 
 # ╔═╡ ae5f7182-0a38-4178-bf15-a7307876826e
 temperature_nodes = 0 : 100 : 50_000
-
-# ╔═╡ 8b8880ed-eec4-4ae3-8055-5b899915dff7
-begin
-	plot(title = "Зависимость светимости от температуры", xlabel = "T", ylabel = "L", legend = :bottomright)
-	plot!(temperature_nodes, black_body_K_rectangle.(temperature_nodes), label = "planck(λ, T) * width")
-	plot!(temperature_nodes, black_body_K.(temperature_nodes), label = "∫planck(λ, T) dλ")
-end
 
 # ╔═╡ 5b03df78-85f1-4f54-b814-9658f4666779
 darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272)
@@ -296,47 +270,27 @@ begin
 	plot!(legend = false)
 end
 
-# ╔═╡ f907b5fe-9ee9-4305-8ec5-d390f533f007
-K_coefs_interpolant(3600.)
-
-# ╔═╡ 504e7283-5f1e-47e5-be80-081e1fa24f52
-darkening_coefficients
-
-# ╔═╡ 5af0d72a-df35-4a9d-8818-946c50a41de4
-K_coefs_interpolant(2000)
-
-# ╔═╡ 6b3b695c-6281-45cb-9f65-a599b37989bb
-darkening_coefficients2
-
 # ╔═╡ 6fbfd8b0-19bc-417f-8fb8-9345086685f3
 md"### Скорость интегрирования с кешированием нормалей"
+
+# ╔═╡ 2c716424-cf65-4141-b9ed-e282698ec438
+begin
+	normals = calc_function_on_faces(m, normalized_normal)
+    areas = calc_function_on_faces(m, area)
+	mesh = apply_function(m, K_coefs_interpolant, :T, :darkening_coefs)
+end
 
 # ╔═╡ f457d950-a90f-4726-b132-f5f6ceaee8e3
 d = (1/√2, 1/√2, 0.)
 
-# ╔═╡ 8f019dcc-fff8-4a7f-a15c-d5e5d507656f
-# ╠═╡ disabled = true
-#=╠═╡
-# С предварительно вычисленными нормалями
-@btime integrate_data_over_mesh(mesh, :g, d, normals, areas, c -> 1., T -> ())
-  ╠═╡ =#
-
 # ╔═╡ 16bbab2a-43ff-432a-af10-d83ac1a7aa4b
-# ╠═╡ disabled = true
-#=╠═╡
-# С предварительно вычисленными нормалями и константным потемнением к краю
-@btime integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, T -> darkening_coefficients)
-  ╠═╡ =#
-
-# ╔═╡ c6c9f467-d821-47e2-b2a1-fedfdb685880
-# ╠═╡ disabled = true
-#=╠═╡
-# С предварительно вычисленными нормалями и интерполированным потемнением к краю
-@btime integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, K_coefs_interpolant)
-  ╠═╡ =#
+@btime integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening)
 
 # ╔═╡ 8f373d53-15f4-4c6a-91fe-cc12c9726285
 @code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, K_coefs_interpolant)
+
+# ╔═╡ e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
+@btime star_magnitude(phases; params...)
 
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
@@ -346,10 +300,7 @@ d = (1/√2, 1/√2, 0.)
 # ╠═87a082a1-4e29-4702-acb0-35afc8e51735
 # ╠═c72dec8c-9841-45af-bb0f-c0818102fe4f
 # ╠═3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
-# ╠═f6bdb017-9f95-4d59-aac3-b7651947e531
-# ╠═23a72616-d49d-4389-989b-590f01bf057d
-# ╠═73765725-9adb-4112-9fe5-9f506901c352
-# ╠═28452494-35d6-443a-8986-8c41cdc239de
+# ╠═692e28c0-ca1a-4186-8009-342a2e4efdb0
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
 # ╠═424af3e5-703b-46a1-be45-e87f78714517
@@ -358,20 +309,15 @@ d = (1/√2, 1/√2, 0.)
 # ╠═11872494-739a-4ada-8572-733d1756b6a5
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
 # ╠═ae5f7182-0a38-4178-bf15-a7307876826e
-# ╠═8b8880ed-eec4-4ae3-8055-5b899915dff7
 # ╠═5b03df78-85f1-4f54-b814-9658f4666779
 # ╠═d88a8c9a-9afb-4f0e-95d8-3b60f0fcf22e
 # ╠═21085b08-dad7-4d62-963e-5355576be10b
 # ╠═e1cb3cb6-532d-43f8-beaa-646f8c1264fa
 # ╠═4b1e0d61-d58a-4e64-a120-1da21c8ece50
 # ╠═a5d7d64d-e2a4-49bc-9541-543acf527403
-# ╠═f907b5fe-9ee9-4305-8ec5-d390f533f007
-# ╠═504e7283-5f1e-47e5-be80-081e1fa24f52
-# ╠═5af0d72a-df35-4a9d-8818-946c50a41de4
-# ╠═6b3b695c-6281-45cb-9f65-a599b37989bb
 # ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
+# ╠═2c716424-cf65-4141-b9ed-e282698ec438
 # ╠═f457d950-a90f-4726-b132-f5f6ceaee8e3
-# ╠═8f019dcc-fff8-4a7f-a15c-d5e5d507656f
 # ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
-# ╠═c6c9f467-d821-47e2-b2a1-fedfdb685880
 # ╠═8f373d53-15f4-4c6a-91fe-cc12c9726285
+# ╠═e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
