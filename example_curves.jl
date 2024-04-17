@@ -35,7 +35,7 @@ md"### Визуализация направлений"
 # ╔═╡ 74d8becd-7529-47dd-bf4b-9b1cfe3f17de
 begin
 	mass_quotients = 0.001:0.01:10
-	interpolated_mesh = InterpolatedRocheMesh(64, mass_quotients)
+	interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), mass_quotients)
 end
 
 # ╔═╡ 87a082a1-4e29-4702-acb0-35afc8e51735
@@ -51,7 +51,7 @@ end
 
 # ╔═╡ c72dec8c-9841-45af-bb0f-c0818102fe4f
 begin
-	local f = viz(domain(interpolated_mesh(0.5)), showfacets = true)
+	local f = viz(domain(interpolated_mesh(0.5)), showsegments = true)
 
 	for d in directions
 		Makie.lines!([d, (0, 0, 0)])
@@ -65,7 +65,7 @@ begin
 	m = interpolated_mesh(1.)
 	m = avg_over_faces(m, :g)
 	m = apply_function(m, g -> g^0.08, :g, :T)
-	f = viz(domain(m), color = values(m, 2).T, showfacets = true)
+	f = viz(domain(m), color = values(m, 2).T)
 	# cbar(f, values(m, 0).T)
 end
 
@@ -277,7 +277,7 @@ md"### Скорость интегрирования с кешированием
 begin
 	normals = calc_function_on_faces(m, normalized_normal)
     areas = calc_function_on_faces(m, area)
-	mesh = apply_function(m, K_coefs_interpolant, :T, :darkening_coefs)
+	mesh = apply_function(m, K_coefs_interpolant, :T, :darkening_coefs);
 end
 
 # ╔═╡ f457d950-a90f-4726-b132-f5f6ceaee8e3
@@ -291,6 +291,15 @@ d = (1/√2, 1/√2, 0.)
 
 # ╔═╡ e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
 @btime star_magnitude(phases; params...)
+
+# ╔═╡ ae2187d9-9f14-4c8a-9605-f1883969c66f
+begin
+	cosines = map(faces(tetra_sphere(4), 2)) do face
+		normalized_normal(face) ⋅ coordinates(vertices(face)[1])
+	end
+
+	all(cosines .> 0)
+end
 
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
@@ -321,3 +330,4 @@ d = (1/√2, 1/√2, 0.)
 # ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
 # ╠═8f373d53-15f4-4c6a-91fe-cc12c9726285
 # ╠═e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
+# ╠═ae2187d9-9f14-4c8a-9605-f1883969c66f

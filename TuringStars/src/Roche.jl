@@ -13,11 +13,9 @@ export
     LagrangePoint_X,
     Ω_critical,
     roche_r,
-    make_roche_geotable,
     InterpolatedRocheMesh,
-    integrate_data_over_triangular_mesh,
+    tetra_sphere,
     integrate_data_over_mesh,
-    integrate_data_over_mesh2,
     apply_function,
     avg_over_faces,
     calc_function_on_faces,
@@ -159,16 +157,29 @@ function InterpolatedRocheMesh(spherical_mesh::SimpleMesh, mass_quotient_knots)
 end
 
 
+"""
+Создаёт сферическую сетку, используя алгоритм Катмулла-Кларка.
+Начальная сетка — тетраэдр.
+"""
+function tetra_sphere(catmullclark_iterations)
+    box = Tetrahedron(
+        (-√2/3, -√2/√3, -1/3),
+        (0, 0, 1),
+        (2√2/3, 0, -1/3),
+        (-√2/3, √2/√3, -1/3),
+    ) |> boundary |> discretize
 
-"""
-Конструктор InterpolatedRocheMesh, который строит сферическую сетку, используя Meshes.RegularDiscretization и разбивает её на треугольники.
-"""
-function InterpolatedRocheMesh(number_of_points, mass_quotient_knots)
-    sphere = Sphere((0. ,0., 0.), 1.)
-    spherical_mesh = discretize(sphere, RegularDiscretization(number_of_points)) |>
-                    # Rotate(Vec(0., 0., 1.), Vec(1., 0., 0.)) |>
-                    simplexify
-    return InterpolatedRocheMesh(spherical_mesh, mass_quotient_knots)
+    for _ ∈ 1 : catmullclark_iterations
+        box = refine(box, CatmullClark())
+    end
+
+    points = map(vertices(box)) do point
+        coords = coordinates(point)
+        coords = coords ./ norm(coords)
+        Point(coords...)
+    end
+
+    return SimpleMesh(points, topology(box)) |> simplexify
 end
 
 
