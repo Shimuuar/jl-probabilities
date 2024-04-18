@@ -54,7 +54,7 @@ begin
 end
 
 # ╔═╡ a6dccb45-fa0c-4aff-ae2e-23efc08fd8da
-interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
+interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), 0.1:0.1:10)
 
 # ╔═╡ b782aa83-2e9d-449c-a996-2064c890c025
 function plot_line!(model_params, sample, p = missing)
@@ -75,9 +75,9 @@ function plot_line!(model_params, sample, p = missing)
 			β = model_params.β,
 			luminocity_function = channel.luminocity_function,
 			darkening_function = channel.darkening_function,
-			darkening_coefficients = channel.darkening_coefficients
+			darkening_coefs_interpolant = channel.darkening_coefs_interpolant
 		)
-		vals .+= sample[Symbol("offset[$i]")]
+		vals .+= sample[:offset][i]
 		plot!(subplot, days, vals)
 	end
 	plot!()
@@ -123,7 +123,7 @@ channels = [
 		measurements_t = points.day,
 		measurements_y = points.K,
 		darkening_function = claret_darkening,
-		darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
+		darkening_coefs_interpolant = K_coefs_interpolant,
 		luminocity_function = black_body_K,
 		σ_measured = points.K_err,
 		σ_common = FlatPos(0.),
@@ -132,7 +132,7 @@ channels = [
 		measurements_t = points.day,
 		measurements_y = points.J,
 		darkening_function = claret_darkening,
-		darkening_coefficients = (1.2834, -1.4623, 1.5046, -0.5507),
+		darkening_coefs_interpolant = J_coefs_interpolant,
 		luminocity_function = black_body_J,
 		σ_measured = points.J_err,
 		σ_common = FlatPos(0.),
@@ -149,120 +149,44 @@ model_params = ModelParams(
 # ╔═╡ e0419433-72d5-4d12-9a81-838886dd7317
 model = first_model(model_params)
 
-# ╔═╡ 218df127-0f16-41b2-89d4-02be6b331936
-mle_estimate = optimize(model, MLE())
+# ╔═╡ b1701d19-4cb7-4c35-943e-6a9cd415c4a1
+function logpdf_objective(model)
+	var_info = DynamicPPL.VarInfo(model)
 
-# ╔═╡ 2356ab8e-2098-48eb-abfa-7371f2b7a6ee
-plot_garbige(model_params, [mle_estimate.values])
-
-# ╔═╡ a071af8e-50cc-40f2-96dd-49c13266a885
-mle_estimate.values[:mass_quotient]
-
-# ╔═╡ 90bb0d33-548e-4c33-ba8c-b11926529a9c
-model_params2 = ModelParams(
-	channels = channels,
-	period = estimated_period,
-	β = 0.25,
-)
-
-# ╔═╡ 995f20d1-90e1-4d74-a7e2-99c744e8eb24
-model2 = first_model(model_params2)
-
-# ╔═╡ d1cdc25b-1d80-41a3-8561-9c8e187ebca3
-mle_estimate2 = optimize(model2, MLE())
-
-# ╔═╡ b1c4696f-e4c6-4006-aab6-0745879f2131
-mle_estimate2.values[:initial_phase]
-
-# ╔═╡ 53894ab6-e2c7-49cb-b6f6-7159f9bfd306
-mle_estimate2.values[:mass_quotient]
-
-# ╔═╡ 1bfa3efb-9a5c-45bd-9a79-6e2093b57f1d
-plot_garbige(model_params2, [mle_estimate2.values])
-
-# ╔═╡ 45afe5bd-fcfe-4d67-bd14-d9d607bf8724
-plot(points.day ./ 365)
-
-# ╔═╡ f5abbcbf-4dc7-46ba-bf98-7ad0dd30cb99
-function plot_rubbish2(model_params, sample)
-	p = plot(
-		layout = (2, 1),
-		title = ["Спектральный канал K" "Спектральный канал J"],
-		legend = false,
-		xlabel = ["" "фаза"],
-		ylabel = "Звездная величина",
-		yflip = true,
-		size = (600, 600),
-		xlim = (-0.1, 1.1),
-		margin = 12Plots.px,
-	)
-
-	initial_phase = sample[:initial_phase] / 2π
-
-	for (channel, subplot) ∈ zip(model_params.channels, p.subplots)
-		phases = (channel.measurements_t .% model_params.period) ./ model_params.period .+ initial_phase
-		scatter!(
-			subplot,
-			phases,
-			channel.measurements_y,
-			markersize = 2,
-			yerr = channel.σ_measured,
-			markercolor = 1,
-		)
-		scatter!(
-			subplot,
-			phases .+ 1,
-			channel.measurements_y,
-			markersize = 2,
-			yerr = channel.σ_measured,
-			markercolor = 1,
-		)
-		scatter!(
-			subplot,
-			phases .-1,
-			channel.measurements_y,
-			markersize = 2,
-			yerr = channel.σ_measured,
-			markercolor = 1,
-		)
+	return function f(vars)
+		var_info_ = DynamicPPL.unflatten(var_info, vars)
+		return logjoint(model, var_info_)
 	end
-
-	phases = -0.1 : 0.01 : 1.1
-
-	for (c, (channel, subplot)) ∈ enumerate(zip(model_params.channels, p.subplots))
-
-		if isa(sample, Chains)
-			sample = get_params(sample)
-		end
-
-		vals = star_magnitude(
-			phases .* 2π;
-			mass_quotient = sample[:mass_quotient],
-			observer_angle = sample[:observer_angle],
-			temperature_at_bottom = model_params.temperature_at_bottom,
-			interpolated_mesh,
-			β = model_params.β,
-			luminocity_function = channel.luminocity_function,
-			darkening_function = channel.darkening_function,
-			darkening_coefficients = channel.darkening_coefficients
-		)
-		vals .+= sample[Symbol("offset[$c]")]
-
-		plot!(
-			subplot,
-			phases,
-			vals,
-			color = 2
-		)
-	end
-	p
 end
 
-# ╔═╡ 6373adaa-9a74-42a2-b159-f9190872bc83
-mle_estimate.values[Symbol("offset[1]")]
+# ╔═╡ a3b38672-7e73-4701-abc6-30d057f09754
+function MAP_point(model, initial_params)
+	var_info = DynamicPPL.VarInfo(model)
+	syms = DynamicPPL.syms(var_info)
+	x0 = vcat(collect(initial_params[syms])...)
 
-# ╔═╡ 42837d09-13a9-46df-8f65-fb8f241f6fba
-plot_rubbish2(model_params, mle_estimate.values)
+	optim_result = maximize(logpdf_objective(model), x0)
+	optim_array = Optim.maximizer(optim_result)
+
+	var_info = DynamicPPL.unflatten(var_info, optim_array)
+	return DynamicPPL.values_as(var_info, NamedTuple)
+end
+
+# ╔═╡ 991316a4-0a9c-433b-847b-4c4a4e92a24e
+initial_params = (;
+	mass_quotient = 0.5,
+	initial_phase = -1.45,
+	observer_angle = π/2 - 0.1,
+	temperature_at_bottom = 3500.,
+	σ_common = [0.1, 0.1],
+	offset = [18.84, 21.15],
+)
+
+# ╔═╡ f7c074e7-d5b1-4b2c-9ab6-57e85b237a04
+MAP_1 = MAP_point(model, initial_params)
+
+# ╔═╡ 454c33e2-bf88-471d-b51c-6f2010433fef
+plot_garbige(model_params, [MAP_1])
 
 # ╔═╡ Cell order:
 # ╠═11decfb6-8f0a-11ee-1bf8-d3faf8756b8b
@@ -276,16 +200,8 @@ plot_rubbish2(model_params, mle_estimate.values)
 # ╠═0d54214f-5b15-44cc-bce0-96829c4b5470
 # ╠═9d29eca2-57c2-4ace-82de-1472c5509cd8
 # ╠═e0419433-72d5-4d12-9a81-838886dd7317
-# ╠═218df127-0f16-41b2-89d4-02be6b331936
-# ╠═2356ab8e-2098-48eb-abfa-7371f2b7a6ee
-# ╠═a071af8e-50cc-40f2-96dd-49c13266a885
-# ╠═90bb0d33-548e-4c33-ba8c-b11926529a9c
-# ╠═995f20d1-90e1-4d74-a7e2-99c744e8eb24
-# ╠═d1cdc25b-1d80-41a3-8561-9c8e187ebca3
-# ╠═b1c4696f-e4c6-4006-aab6-0745879f2131
-# ╠═53894ab6-e2c7-49cb-b6f6-7159f9bfd306
-# ╠═1bfa3efb-9a5c-45bd-9a79-6e2093b57f1d
-# ╠═45afe5bd-fcfe-4d67-bd14-d9d607bf8724
-# ╠═f5abbcbf-4dc7-46ba-bf98-7ad0dd30cb99
-# ╠═6373adaa-9a74-42a2-b159-f9190872bc83
-# ╠═42837d09-13a9-46df-8f65-fb8f241f6fba
+# ╠═b1701d19-4cb7-4c35-943e-6a9cd415c4a1
+# ╠═a3b38672-7e73-4701-abc6-30d057f09754
+# ╠═991316a4-0a9c-433b-847b-4c4a4e92a24e
+# ╠═f7c074e7-d5b1-4b2c-9ab6-57e85b237a04
+# ╠═454c33e2-bf88-471d-b51c-6f2010433fef
