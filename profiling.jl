@@ -22,7 +22,7 @@ end
 
 estimated_period = 227.3200498131982
 
-interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
+interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), 0.1:0.1:10)
 
 channels = [
 	ChannelParams(
@@ -68,7 +68,7 @@ chain_params = ChainParams(
 )
 
 
-@profview samples = TuringStars.ChainCache._uncached_sample(chain_params)
+@profview @time samples = TuringStars.ChainCache._uncached_sample(chain_params)
 
 
 
@@ -90,14 +90,16 @@ end
 
 
 
-@profview star_magnitude(
-	0.0:0.001:2π,
-	mass_quotient=0.5,
-	observer_angle=π/2 - 0.1,
-	temperature_at_bottom=3500.,
-	β=0.08,
-	interpolated_mesh=interpolated_mesh,
-	luminocity_function=black_body_K,
-	darkening_function=claret_darkening,
-	darkening_coefs_interpolant = K_coefs_interpolant
-)
+@profview for _ in 1:100
+	star_magnitude(
+		0.0:0.01:2π,
+		mass_quotient=0.5,
+		observer_angle=π/2 - 0.1,
+		temperature_at_bottom=3500.,
+		β=0.08,
+		interpolated_mesh=interpolated_mesh,
+		luminocity_function=black_body_K,
+		darkening_function=claret_darkening,
+		darkening_coefs_interpolant = K_coefs_interpolant
+	)
+end

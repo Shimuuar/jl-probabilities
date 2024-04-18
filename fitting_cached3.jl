@@ -68,7 +68,7 @@ end
 estimated_period
 
 # ╔═╡ 2fe448f3-1744-4bbb-83e7-290a9214e7c8
-interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
+interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), 0.1:0.1:10)
 
 # ╔═╡ d9b9b851-cca0-4a40-a627-7dec9c5da6c1
 function plot_line!(model_params, sample, p = missing)
@@ -89,7 +89,7 @@ function plot_line!(model_params, sample, p = missing)
 			β = model_params.β,
 			luminocity_function = channel.luminocity_function,
 			darkening_function = channel.darkening_function,
-			darkening_coefficients = channel.darkening_coefficients
+			darkening_coefs_interpolant = channel.darkening_coefs_interpolant
 		)
 		vals .+= sample[:offset][i]
 		plot!(subplot, days, vals)
@@ -196,7 +196,7 @@ function plot_rubbish(model_params, samples)
 				β = model_params.β,
 				luminocity_function = channel.luminocity_function,
 				darkening_function = channel.darkening_function,
-				darkening_coefficients = channel.darkening_coefficients
+				darkening_coefs_interpolant = channel.darkening_coefs_interpolant
 			)
 			vals[s, :] .+= sample[:offset][c]
 		end
@@ -232,7 +232,7 @@ channels = [
 		measurements_t = points.day,
 		measurements_y = points.K,
 		darkening_function = claret_darkening,
-		darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
+		darkening_coefs_interpolant = K_coefs_interpolant,
 		luminocity_function = black_body_K,
 		σ_measured = points.K_err,
 		σ_common = FlatPos(0.),
@@ -241,7 +241,7 @@ channels = [
 		measurements_t = points.day,
 		measurements_y = points.J,
 		darkening_function = claret_darkening,
-		darkening_coefficients = (1.2834, -1.4623, 1.5046, -0.5507),
+		darkening_coefs_interpolant = J_coefs_interpolant,
 		luminocity_function = black_body_J,
 		σ_measured = points.J_err,
 		σ_common = FlatPos(0.),
@@ -253,6 +253,7 @@ model_params = ModelParams(
 	channels = channels,
 	period = estimated_period,
 	β = 0.08,
+	temperature_at_bottom = 3500.,
 )
 
 # ╔═╡ 00044db4-b168-44be-9d39-87d27b7d330d
@@ -261,7 +262,7 @@ plot_garbige(model_params, [initial_params])
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 4096,
+	n_samples = 1024,
 	init_params = initial_params,
 	sampler = NUTS()
 )

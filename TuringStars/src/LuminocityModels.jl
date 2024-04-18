@@ -21,7 +21,7 @@ export
 
 
 @kwdef struct MeshParams
-    n_discretization_points::Int = 64
+    catmullclark_iterations::Int = 4
     mass_quotient_nodes = 0.1 : 0.1 : 10.
 end
 
@@ -71,7 +71,7 @@ end
 
 function first_model(model_params)
     interpolated_mesh = InterpolatedRocheMesh(
-        model_params.mesh_params.n_discretization_points,
+        tetra_sphere(model_params.mesh_params.catmullclark_iterations),
         model_params.mesh_params.mass_quotient_nodes
     )
 

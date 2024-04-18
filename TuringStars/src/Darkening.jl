@@ -2,6 +2,7 @@ module Darkening
 
 using Interpolations
 using DelimitedFiles
+using StructTypes
 
 export
     claret_coefs_interpolant,
@@ -56,5 +57,9 @@ end
 
 J_coefs_interpolant = claret_coefs_interpolant(:J)
 K_coefs_interpolant = claret_coefs_interpolant(:K)
+
+StructTypes.StructType(::typeof(J_coefs_interpolant)) = StructTypes.StringType()
+# StructTypes.StructType(::typeof(K_coefs_interpolant)) = StructTypes.StringType()
+
 
 end
