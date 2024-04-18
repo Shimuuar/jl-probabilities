@@ -20,7 +20,7 @@ begin
 	using Plots
 	using StatsPlots
 	plotlyjs()
-	theme(:default)
+	theme(:juno)
 
 	using LombScargle
 end
@@ -68,7 +68,7 @@ end
 estimated_period
 
 # ╔═╡ 2fe448f3-1744-4bbb-83e7-290a9214e7c8
-interpolated_mesh = InterpolatedRocheMesh(64, 0.1:0.1:10)
+interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), 0.1:0.1:10)
 
 # ╔═╡ d9b9b851-cca0-4a40-a627-7dec9c5da6c1
 function plot_line!(model_params, sample, p = missing)
@@ -89,7 +89,7 @@ function plot_line!(model_params, sample, p = missing)
 			β = model_params.β,
 			luminocity_function = channel.luminocity_function,
 			darkening_function = channel.darkening_function,
-			darkening_coefficients = channel.darkening_coefficients
+			darkening_coefs_interpolant = channel.darkening_coefs_interpolant
 		)
 		vals .+= sample[:offset][i]
 		plot!(subplot, days, vals)
@@ -196,7 +196,7 @@ function plot_rubbish(model_params, samples)
 				β = model_params.β,
 				luminocity_function = channel.luminocity_function,
 				darkening_function = channel.darkening_function,
-				darkening_coefficients = channel.darkening_coefficients
+				darkening_coefs_interpolant = channel.darkening_coefs_interpolant
 			)
 			vals[s, :] .+= sample[:offset][c]
 		end
@@ -231,7 +231,7 @@ channels = [
 		measurements_t = points.day,
 		measurements_y = points.K,
 		darkening_function = claret_darkening,
-		darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272),
+		darkening_coefs_interpolant = K_coefs_interpolant,
 		luminocity_function = black_body_K,
 		σ_measured = points.K_err,
 		σ_common = FlatPos(0.),
@@ -240,7 +240,7 @@ channels = [
 		measurements_t = points.day,
 		measurements_y = points.J,
 		darkening_function = claret_darkening,
-		darkening_coefficients = (1.2834, -1.4623, 1.5046, -0.5507),
+		darkening_coefs_interpolant = J_coefs_interpolant,
 		luminocity_function = black_body_J,
 		σ_measured = points.J_err,
 		σ_common = FlatPos(0.),
@@ -263,7 +263,7 @@ plot_garbige(model_params, [initial_params])
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 2048,
+	n_samples = 1024,
 	init_params = initial_params,
 	sampler = NUTS()
 )
@@ -359,23 +359,6 @@ function i(q; m = 1.44)
 	rad2deg(asin(cbrt(0.322408 / m * (1 + q)^2)))
 end
 
-# ╔═╡ d6d41a41-6528-49b2-bf52-3f80542f9dc0
-begin
-	local q = 0 : 0.01 : 1.05
-	plot(q, i.(q))
-	plot!(q, i.(q, m = 1.41))
-end
-
-# ╔═╡ 439fba04-2fd8-47ef-b34c-d0b63d9508ce
-i(1.113)
-
-# ╔═╡ 4cead2e8-2caf-486b-8a5d-990815b88ab9
-begin
-	local q = 0 : 0.01 : 1.05
-	PyPlot.plot(q, i.(q))
-	PyPlot.gcf()
-end
-
 # ╔═╡ fc855167-775a-4688-adbc-93625d72c3cd
 mx = maximize(x -> pdf(k, x[1], x[2]), [1., 60.])
 
@@ -439,9 +422,6 @@ end
 # ╠═072d2ba5-4bf8-4d9d-8165-38bcbfe8cd82
 # ╠═58497ce3-5b59-4473-b3c3-9ddea6de1cb9
 # ╠═4693a488-e017-46a8-b077-cffd3b20303e
-# ╠═d6d41a41-6528-49b2-bf52-3f80542f9dc0
-# ╠═439fba04-2fd8-47ef-b34c-d0b63d9508ce
-# ╠═4cead2e8-2caf-486b-8a5d-990815b88ab9
 # ╠═3b39b5a4-6cb1-4b80-9d13-730f6a797fd8
 # ╠═fc855167-775a-4688-adbc-93625d72c3cd
 # ╠═a5f25a95-d00f-4cc9-b93e-f02efc812e9d
