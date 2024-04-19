@@ -263,7 +263,7 @@ plot_garbige(model_params, [initial_params])
 # ╔═╡ c88314a3-cd9e-42b2-acee-4d613b1b36e1
 chain_params = ChainParams(
 	model_params = model_params,
-	n_samples = 1024,
+	n_samples = 2048,
 	init_params = initial_params,
 	sampler = NUTS()
 )
