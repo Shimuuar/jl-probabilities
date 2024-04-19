@@ -51,7 +51,7 @@ end
 
 # ╔═╡ c72dec8c-9841-45af-bb0f-c0818102fe4f
 begin
-	local f = viz(domain(interpolated_mesh(0.5)), showsegments = true)
+	local f = viz(domain(interpolated_mesh(0.5)), showfacets = true)
 
 	for d in directions
 		Makie.lines!([d, (0, 0, 0)])
@@ -95,8 +95,7 @@ params = (;
 	interpolated_mesh,
 	luminocity_function = black_body_K,
     darkening_function = claret_darkening,
-	# darkening_coefs_interpolant = K_coefs_interpolant,
-	darkening_coefs_interpolant = T -> (1.3113, -1.2998, 1.0144, -0.3272),
+	darkening_coefs_interpolant = K_coefs_interpolant,
 )
 
 # ╔═╡ 08d08b9d-f632-49f6-8df6-c39d35b7dc27
@@ -172,9 +171,6 @@ begin
 	plot!()
 end
 
-# ╔═╡ ae5f7182-0a38-4178-bf15-a7307876826e
-temperature_nodes = 0 : 100 : 50_000
-
 # ╔═╡ 5b03df78-85f1-4f54-b814-9658f4666779
 darkening_coefficients = (1.3113, -1.2998, 1.0144, -0.3272)
 
@@ -221,7 +217,7 @@ begin
 		label = "С потемнением T = 2000"
 	)
 
-	 mgs = star_magnitude(phases; params...)
+	mgs = star_magnitude(phases; params...)
 	plot!(
 		phases,
 		mgs .- mgs[1],
@@ -270,6 +266,58 @@ begin
 	plot!(legend = false)
 end
 
+# ╔═╡ 77e99a76-4303-42b2-bd4b-7a614552e24b
+md"### Разность минимумов"
+
+# ╔═╡ 9d2f6321-0688-400a-b4db-7f3024c03326
+function diff_of_mins(; params...)
+	mins = star_magnitude([0., π]; params...)
+	return mins[1] - mins[2]
+end
+
+# ╔═╡ 76f7b84b-defe-4881-bbfa-459f2bc8aac7
+begin
+	local q_list = 0.2 : 0.2 : 3
+	local diffs = [diff_of_mins(; params..., mass_quotient = 1/q) for q ∈ q_list]
+	plot(
+		q_list,
+		diffs,
+		xlabel = "Масса гиганта / масса карлика",
+		ylabel = "Δm",
+		legend = false,
+		title = "Разность минимумов"
+	)
+end
+
+# ╔═╡ b6eed0d3-f260-477d-99a4-1826ab7eb565
+begin
+	local T_list = 2800 : 10 : 4400
+	local diffs = [diff_of_mins(; params..., temperature_at_bottom = T) for T ∈ T_list]
+	plot(
+		T_list,
+		diffs,
+		xlabel = "T_bottom",
+		ylabel = "Δm",
+		legend = false,
+		title = "Разность минимумов"
+	)
+end
+
+# ╔═╡ 1a5ad403-6320-45f3-afd7-3280e4676e8b
+begin
+	local T_list = 2800 : 10 : 4400
+	local magnitudes = hcat([star_magnitude([0, π]; params..., temperature_at_bottom = T) for T ∈ T_list]...)
+
+	plot(
+		T_list,
+		magnitudes',
+		xlabel = "T_bottom",
+		ylabel = "m",
+		legend = false,
+		title = "Первый и второй минимум"
+	)
+end
+
 # ╔═╡ 6fbfd8b0-19bc-417f-8fb8-9345086685f3
 md"### Скорость интегрирования с кешированием нормалей"
 
@@ -291,6 +339,9 @@ d = (1/√2, 1/√2, 0.)
 
 # ╔═╡ e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
 @btime star_magnitude(phases; params...)
+
+# ╔═╡ 10e128c6-1cf4-484e-bd33-02b28e428973
+length(phases) * 6.25 / 1000
 
 # ╔═╡ ae2187d9-9f14-4c8a-9605-f1883969c66f
 begin
@@ -317,17 +368,22 @@ end
 # ╠═878919d1-66ad-4ff4-9832-2fbb197ac01f
 # ╠═11872494-739a-4ada-8572-733d1756b6a5
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
-# ╠═ae5f7182-0a38-4178-bf15-a7307876826e
 # ╠═5b03df78-85f1-4f54-b814-9658f4666779
 # ╠═d88a8c9a-9afb-4f0e-95d8-3b60f0fcf22e
 # ╠═21085b08-dad7-4d62-963e-5355576be10b
 # ╠═e1cb3cb6-532d-43f8-beaa-646f8c1264fa
 # ╠═4b1e0d61-d58a-4e64-a120-1da21c8ece50
 # ╠═a5d7d64d-e2a4-49bc-9541-543acf527403
+# ╟─77e99a76-4303-42b2-bd4b-7a614552e24b
+# ╠═9d2f6321-0688-400a-b4db-7f3024c03326
+# ╠═76f7b84b-defe-4881-bbfa-459f2bc8aac7
+# ╠═b6eed0d3-f260-477d-99a4-1826ab7eb565
+# ╠═1a5ad403-6320-45f3-afd7-3280e4676e8b
 # ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
 # ╠═2c716424-cf65-4141-b9ed-e282698ec438
 # ╠═f457d950-a90f-4726-b132-f5f6ceaee8e3
 # ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
 # ╠═8f373d53-15f4-4c6a-91fe-cc12c9726285
 # ╠═e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
+# ╠═10e128c6-1cf4-484e-bd33-02b28e428973
 # ╠═ae2187d9-9f14-4c8a-9605-f1883969c66f
