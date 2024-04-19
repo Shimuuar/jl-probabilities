@@ -21,10 +21,13 @@ begin
 	using Plots
 	using StatsPlots
 	plotlyjs()
-	theme(:default)
+	theme(:juno)
 
 	using LombScargle
 end
+
+# ╔═╡ 3d70079b-add5-4b60-9cb2-af7ed5caad87
+using Dates
 
 # ╔═╡ 0a209f5e-bd22-4072-9247-c0ddcd42fdb8
 begin
@@ -188,6 +191,80 @@ MAP_1 = MAP_point(model, initial_params)
 # ╔═╡ 454c33e2-bf88-471d-b51c-6f2010433fef
 plot_garbige(model_params, [MAP_1])
 
+# ╔═╡ 66651fe4-7115-40e9-935d-95795757da4e
+md"### ``\chi^2``"
+
+# ╔═╡ 28df81cf-e27f-40ee-9ce6-5ff202994dbc
+function chi2_value(model_params, MAP_params)
+
+	sum(enumerate(model_params.channels)) do (i, channel)
+
+		phases = channel.measurements_t ./ model_params.period .* 2π .+ MAP_params[:initial_phase]
+
+		predicted_magnitudes = MAP_params[:offset][i]
+		predicted_magnitudes = star_magnitude(
+			phases;
+			mass_quotient = MAP_params[:mass_quotient],
+			observer_angle = MAP_params[:observer_angle],
+			temperature_at_bottom = model_params.temperature_at_bottom,
+			interpolated_mesh,
+			β = model_params.β,
+			luminocity_function = channel.luminocity_function,
+			darkening_function = channel.darkening_function,
+			darkening_coefs_interpolant = channel.darkening_coefs_interpolant
+		)
+		predicted_magnitudes .+= MAP_params[:offset][i]
+
+		σ² = @. channel.σ_measured^2 + MAP_params[Symbol("σ_common[$i]")]
+
+		sum(@. (channel.measurements_y - predicted_magnitudes)^2 / σ²)
+	end
+end
+
+# ╔═╡ be6c4b94-861e-4907-8a53-dbc3a674664e
+chi2_value_ = chi2_value(model_params, MAP_1)
+
+# ╔═╡ bce9145d-23f2-4e22-90bc-0c0089502286
+Chi2Dist = Chisq(2 * length(points.day) - 5)
+
+# ╔═╡ 363ea8d3-a174-4186-a967-be659aaa9a72
+1 - cdf(Chi2Dist, chi2_value_)
+
+# ╔═╡ eefb61ae-924d-4bb7-9b9a-7235b1f4b826
+md"### err = ``f(t)``"
+
+# ╔═╡ b85b3eb7-5257-43d9-9261-0736f7102474
+function differences(model_params, MAP_params)
+
+	map(enumerate(model_params.channels)) do (i, channel)
+
+		phases = channel.measurements_t ./ model_params.period .* 2π .+ MAP_params[:initial_phase]
+
+		predicted_magnitudes = MAP_params[:offset][i]
+		predicted_magnitudes = star_magnitude(
+			phases;
+			mass_quotient = MAP_params[:mass_quotient],
+			observer_angle = MAP_params[:observer_angle],
+			temperature_at_bottom = model_params.temperature_at_bottom,
+			interpolated_mesh,
+			β = model_params.β,
+			luminocity_function = channel.luminocity_function,
+			darkening_function = channel.darkening_function,
+			darkening_coefs_interpolant = channel.darkening_coefs_interpolant
+		)
+		predicted_magnitudes .+= MAP_params[:offset][i]
+
+		@. channel.measurements_y - predicted_magnitudes
+	end
+end
+
+# ╔═╡ c5ad427c-c144-4cc2-b531-ff830beaa21e
+plot(
+	julian2datetime.(2450199.5 .+ points.day),
+	differences(model_params, MAP_1),
+	label = ["K" "J"]
+)
+
 # ╔═╡ Cell order:
 # ╠═11decfb6-8f0a-11ee-1bf8-d3faf8756b8b
 # ╠═0a209f5e-bd22-4072-9247-c0ddcd42fdb8
@@ -205,3 +282,12 @@ plot_garbige(model_params, [MAP_1])
 # ╠═991316a4-0a9c-433b-847b-4c4a4e92a24e
 # ╠═f7c074e7-d5b1-4b2c-9ab6-57e85b237a04
 # ╠═454c33e2-bf88-471d-b51c-6f2010433fef
+# ╟─66651fe4-7115-40e9-935d-95795757da4e
+# ╠═28df81cf-e27f-40ee-9ce6-5ff202994dbc
+# ╠═be6c4b94-861e-4907-8a53-dbc3a674664e
+# ╠═bce9145d-23f2-4e22-90bc-0c0089502286
+# ╠═363ea8d3-a174-4186-a967-be659aaa9a72
+# ╟─eefb61ae-924d-4bb7-9b9a-7235b1f4b826
+# ╠═b85b3eb7-5257-43d9-9261-0736f7102474
+# ╠═c5ad427c-c144-4cc2-b531-ff830beaa21e
+# ╠═3d70079b-add5-4b60-9cb2-af7ed5caad87
