@@ -6,7 +6,7 @@ _*
 !toc.tex
 .DS_Store
 .vscode
-cache
+cache/*
 J_A+A_363_1081
 *.bbl
 *.blg
@@ -20,3 +20,5 @@ J_A+A_363_1081
 *.run.xml
 *.bcf
 *.dvi
+!cache/cbd91b42935e96e00ac5688e67f8c2c2a2ba28dd
+!cache/d7e95968b1ea7cf297eb9cc2203ddbfc8217a906
