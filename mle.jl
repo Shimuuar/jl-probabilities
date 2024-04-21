@@ -87,7 +87,7 @@ function plot_line!(model_params, sample, p = missing)
 end
 
 # ╔═╡ ed6c9a39-4a07-4e98-b893-537d13b1a45d
-function plot_garbige(model_params, samples)
+function plot_garbige(model_params, samples, add_σ = false)
 	p = plot(
 		layout = (2, 1),
 		title = ["Спектральный канал K" "Спектральный канал J"],
@@ -100,12 +100,19 @@ function plot_garbige(model_params, samples)
 
 	for (channel, subplot) ∈ zip(model_params.channels, p.subplots)
 		t = channel.measurements_t .% model_params.period
+
+		if !add_σ
+			yerr = channel.σ_measured
+		else
+			yerr = @. sqrt(channel.σ_measured^2 + samples[1][Symbol("σ_common[1]")]^2)
+		end
+		
 		scatter!(
 			subplot,
 			t,
 			channel.measurements_y,
 			markersize = 2,
-			yerr = channel.σ_measured
+			yerr = yerr
 		)
 	end
 
@@ -146,7 +153,7 @@ channels = [
 model_params = ModelParams(
 	channels = channels,
 	period = estimated_period,
-	β = 0.08,
+	β = 0.25,
 )
 
 # ╔═╡ e0419433-72d5-4d12-9a81-838886dd7317
@@ -188,8 +195,14 @@ initial_params = (;
 # ╔═╡ f7c074e7-d5b1-4b2c-9ab6-57e85b237a04
 MAP_1 = MAP_point(model, initial_params)
 
+# ╔═╡ 3297cc6f-287f-4b30-a203-0a5add3b7ca0
+rad2deg(MAP_1[:observer_angle])
+
 # ╔═╡ 454c33e2-bf88-471d-b51c-6f2010433fef
 plot_garbige(model_params, [MAP_1])
+
+# ╔═╡ f9c67df6-0b0d-4b06-bb8a-21618da9298c
+plot_garbige(model_params, [MAP_1], true)
 
 # ╔═╡ 66651fe4-7115-40e9-935d-95795757da4e
 md"### ``\chi^2``"
@@ -259,11 +272,19 @@ function differences(model_params, MAP_params)
 end
 
 # ╔═╡ c5ad427c-c144-4cc2-b531-ff830beaa21e
-plot(
-	julian2datetime.(2450199.5 .+ points.day),
-	differences(model_params, MAP_1),
-	label = ["K" "J"]
+scatter(
+	# julian2datetime.(2450199.5 .+ points.day),
+	(points.day .% estimated_period) / estimated_period,
+	differences(model_params, MAP_1)[1],
+	label = ["K" "J"],
+	markersize = 2
 )
+
+# ╔═╡ 6aded0f0-c6b3-4bf2-872c-eb9b264caf00
+histogram(differences(model_params, MAP_1)[1], nbins = 20)
+
+# ╔═╡ 360c7b42-5f18-4137-ac62-e747b47501ff
+differences(model_params, MAP_1)
 
 # ╔═╡ Cell order:
 # ╠═11decfb6-8f0a-11ee-1bf8-d3faf8756b8b
@@ -281,7 +302,9 @@ plot(
 # ╠═a3b38672-7e73-4701-abc6-30d057f09754
 # ╠═991316a4-0a9c-433b-847b-4c4a4e92a24e
 # ╠═f7c074e7-d5b1-4b2c-9ab6-57e85b237a04
+# ╠═3297cc6f-287f-4b30-a203-0a5add3b7ca0
 # ╠═454c33e2-bf88-471d-b51c-6f2010433fef
+# ╠═f9c67df6-0b0d-4b06-bb8a-21618da9298c
 # ╟─66651fe4-7115-40e9-935d-95795757da4e
 # ╠═28df81cf-e27f-40ee-9ce6-5ff202994dbc
 # ╠═be6c4b94-861e-4907-8a53-dbc3a674664e
@@ -290,4 +313,6 @@ plot(
 # ╟─eefb61ae-924d-4bb7-9b9a-7235b1f4b826
 # ╠═b85b3eb7-5257-43d9-9261-0736f7102474
 # ╠═c5ad427c-c144-4cc2-b531-ff830beaa21e
+# ╠═6aded0f0-c6b3-4bf2-872c-eb9b264caf00
+# ╠═360c7b42-5f18-4137-ac62-e747b47501ff
 # ╠═3d70079b-add5-4b60-9cb2-af7ed5caad87

@@ -69,6 +69,14 @@ begin
 	# cbar(f, values(m, 0).T)
 end
 
+# ╔═╡ dc97eb59-95d8-4480-aef7-b51c0677e97f
+begin
+	m2 = interpolated_mesh(1.)
+	m2 = apply_function(m2, g -> g^0.08, :g, :T, 0)
+	m2 = avg_over_faces(m2, :T)
+	f2 = viz(domain(m2), color = values(m2, 0).T)
+end
+
 # ╔═╡ 692e28c0-ca1a-4186-8009-342a2e4efdb0
 begin
 	local temperatures = values(m, 2).T .* 3500.
@@ -275,6 +283,18 @@ function diff_of_mins(; params...)
 	return mins[1] - mins[2]
 end
 
+# ╔═╡ 65cbb252-cb0b-4db5-9244-c427dbc77f9c
+function diff_max_min(; params...)
+	mins = star_magnitude([0., π/2]; params...)
+	return mins[1] - mins[2]
+end
+
+# ╔═╡ a6655229-a4ce-4691-81fe-0da0d76bb249
+function diff_max_min2(; params...)
+	mins = star_magnitude([pi, π/2]; params...)
+	return mins[1] - mins[2]
+end
+
 # ╔═╡ 76f7b84b-defe-4881-bbfa-459f2bc8aac7
 begin
 	local q_list = 0.2 : 0.2 : 3
@@ -303,6 +323,53 @@ begin
 	)
 end
 
+# ╔═╡ d2871328-373d-4545-99f7-13e3e520d67b
+begin
+	local T_list = 2800 : 10 : 4400
+	local diffs = [diff_max_min(; params..., temperature_at_bottom = T, darkening_coefs_interpolant = T -> K_coefs_interpolant(3500.)) for T ∈ T_list]
+	local diffs2 = [diff_max_min2(; params..., temperature_at_bottom = T, darkening_coefs_interpolant = T -> K_coefs_interpolant(3500.)) for T ∈ T_list]
+	plot(
+		T_list,
+		[diffs diffs2],
+		xlabel = "T_bottom",
+		ylabel = "Δm",
+		legend = false,
+		title = "Глубины минимумов"
+	)
+end
+
+# ╔═╡ 977d23f8-cf69-4238-bc21-fc59f6ae960b
+begin
+	local T_list = 2800 : 10 : 4400
+	local diffs = [diff_max_min(; params..., temperature_at_bottom = T) for T ∈ T_list]
+	local diffs2 = [diff_max_min2(; params..., temperature_at_bottom = T) for T ∈ T_list]
+	plot(
+		T_list,
+		[diffs diffs2],
+		xlabel = "T_bottom",
+		ylabel = "Δm",
+		legend = false,
+		title = "Глубины минимумов"
+	)
+end
+
+# ╔═╡ 145d1f9f-316f-422d-b7f0-de4254405458
+begin
+	local T_list = 500 : 10 : 4400
+	darkening_values = [
+		claret_darkening(0.4, K_coefs_interpolant(T)...)
+		for T in T_list
+	]
+	plot(T_list, darkening_values)
+end
+
+# ╔═╡ 3eff4c2a-8049-4e22-bd8a-2a693f3039d0
+begin
+	cs = 0 : 0.01 : 1.
+	darks = claret_darkening.(cs, K_coefs_interpolant(3650)...)
+	plot(cs, darks)
+end
+
 # ╔═╡ 1a5ad403-6320-45f3-afd7-3280e4676e8b
 begin
 	local T_list = 2800 : 10 : 4400
@@ -312,6 +379,21 @@ begin
 		T_list,
 		magnitudes',
 		xlabel = "T_bottom",
+		ylabel = "m",
+		legend = false,
+		title = "Первый и второй минимум"
+	)
+end
+
+# ╔═╡ 85490724-3011-4772-a9cb-e36c69d5a303
+begin
+	local q_list = 0.01 : 0.02 : 3
+	local magnitudes = hcat([star_magnitude([0, π]; params...,  mass_quotient = q) for q ∈ q_list]...)
+
+	plot(
+		q_list,
+		magnitudes',
+		#xlabel = "T_bottom",
 		ylabel = "m",
 		legend = false,
 		title = "Первый и второй минимум"
@@ -360,6 +442,7 @@ end
 # ╠═87a082a1-4e29-4702-acb0-35afc8e51735
 # ╠═c72dec8c-9841-45af-bb0f-c0818102fe4f
 # ╠═3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
+# ╠═dc97eb59-95d8-4480-aef7-b51c0677e97f
 # ╠═692e28c0-ca1a-4186-8009-342a2e4efdb0
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
@@ -376,9 +459,16 @@ end
 # ╠═a5d7d64d-e2a4-49bc-9541-543acf527403
 # ╟─77e99a76-4303-42b2-bd4b-7a614552e24b
 # ╠═9d2f6321-0688-400a-b4db-7f3024c03326
+# ╠═65cbb252-cb0b-4db5-9244-c427dbc77f9c
+# ╠═a6655229-a4ce-4691-81fe-0da0d76bb249
 # ╠═76f7b84b-defe-4881-bbfa-459f2bc8aac7
 # ╠═b6eed0d3-f260-477d-99a4-1826ab7eb565
+# ╠═d2871328-373d-4545-99f7-13e3e520d67b
+# ╠═977d23f8-cf69-4238-bc21-fc59f6ae960b
+# ╠═145d1f9f-316f-422d-b7f0-de4254405458
+# ╠═3eff4c2a-8049-4e22-bd8a-2a693f3039d0
 # ╠═1a5ad403-6320-45f3-afd7-3280e4676e8b
+# ╠═85490724-3011-4772-a9cb-e36c69d5a303
 # ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
 # ╠═2c716424-cf65-4141-b9ed-e282698ec438
 # ╠═f457d950-a90f-4726-b132-f5f6ceaee8e3

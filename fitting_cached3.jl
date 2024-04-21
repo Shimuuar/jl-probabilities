@@ -28,11 +28,11 @@ end
 # ╔═╡ 33b862f3-dc6a-46fe-b73e-a7df7af22e92
 using JSON3, SHA
 
+# ╔═╡ 30d54c72-876b-4d01-b818-b683ffbc400d
+using Roots
+
 # ╔═╡ 234e80df-af67-44ad-8f06-3c3d403dcd25
 using KernelDensity
-
-# ╔═╡ 360119a3-9cba-4e40-ad6c-88a0be627b1e
-using Roots
 
 # ╔═╡ 3b39b5a4-6cb1-4b80-9d13-730f6a797fd8
 using Optim
@@ -270,6 +270,9 @@ chain_params = ChainParams(
 # ╔═╡ eda9134f-b918-42f0-bcfc-e0d601eeeaad
 samples = cached_sample(chain_params)
 
+# ╔═╡ a4fa7c60-3d71-4091-be53-7e02cdbf59f5
+(samples.info.stop_time - samples.info.start_time) / length(samples)
+
 # ╔═╡ a5070b94-48c2-4405-af78-fddd5784161e
 chain_params |> JSON3.write |> sha1 |> bytes2hex
 
@@ -367,7 +370,7 @@ samples_filtered = filter(DataFrame(samples)) do sample
 	catch DomainError
 		return false
 	end
-end
+end;
 
 # ╔═╡ 4cead2e8-2caf-486b-8a5d-990815b88ab9
 begin
@@ -420,6 +423,7 @@ end
 # ╠═97fd2129-d706-480c-a97d-9804027d8b40
 # ╠═c88314a3-cd9e-42b2-acee-4d613b1b36e1
 # ╠═eda9134f-b918-42f0-bcfc-e0d601eeeaad
+# ╠═a4fa7c60-3d71-4091-be53-7e02cdbf59f5
 # ╠═33b862f3-dc6a-46fe-b73e-a7df7af22e92
 # ╠═a5070b94-48c2-4405-af78-fddd5784161e
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
@@ -429,8 +433,8 @@ end
 # ╠═8ec7dad5-b377-43df-8a7f-ad8c9179d7e2
 # ╠═9a192e6e-f8ac-48fc-a7c3-7cbc5ebe7554
 # ╠═61b8f08b-4252-4ea7-9b27-37771331de77
+# ╠═30d54c72-876b-4d01-b818-b683ffbc400d
 # ╠═234e80df-af67-44ad-8f06-3c3d403dcd25
-# ╠═360119a3-9cba-4e40-ad6c-88a0be627b1e
 # ╠═02435262-6c25-427f-9de6-b5251067eccb
 # ╠═fcff208a-6eea-475b-8cee-908457bbc1d3
 # ╠═46a12905-4167-4f7e-92a6-6a633903f7e9
