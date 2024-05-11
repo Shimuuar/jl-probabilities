@@ -17,6 +17,7 @@ export
     ModelParams,
     ChainParams,
     first_model,
+    inverted_model,
     star_magnitude
 
 
@@ -122,6 +123,61 @@ function first_model(model_params)
 end
 
 StructTypes.StructType(::typeof(first_model)) = StructTypes.StringType()
+
+
+function inverted_model(model_params)
+    interpolated_mesh = InterpolatedRocheMesh(
+        tetra_sphere(model_params.mesh_params.catmullclark_iterations),
+        model_params.mesh_params.mass_quotient_nodes
+    )
+
+    mass_quotient_min = 1 / model_params.mesh_params.mass_quotient_nodes[end]
+    mass_quotient_max = 1 / model_params.mesh_params.mass_quotient_nodes[1]
+
+
+    @model function model(channels::Vector{ChannelParams}, measurements_y = Float64[])
+        mass_quotient ~ Uniform(mass_quotient_min, mass_quotient_max)
+        observer_angle ~ Uniform(0., π/2)
+
+        @dist_or_const temperature_at_bottom model_params.temperature_at_bottom
+        @dist_or_const β model_params.β
+
+        initial_phase ~ Uniform(-π, π)
+
+        @dist_or_const period model_params.period
+
+        offset ~ filldist(Flat(), length(channels))
+        σ_common = Array{Float64}(undef, length(channels))
+
+        for (i, channel) ∈ enumerate(channels)
+            phases = initial_phase .+ channel.measurements_t * 2π / period
+
+            predicted_magnitudes = star_magnitude(
+                phases;
+                mass_quotient = 1 / mass_quotient,
+                observer_angle,
+                temperature_at_bottom,
+                β,
+                interpolated_mesh,
+                channel.luminocity_function,
+                channel.darkening_function,
+                channel.darkening_coefs_interpolant
+            )
+
+            predicted_magnitudes .+= offset[i]
+
+            @dist_or_const σ_common[i] channel.σ_common
+            σ = @. √(channel.σ_measured^2 + σ_common[i]^2)
+
+            measurements_y = channel.measurements_y
+            measurements_y .~ Normal.(predicted_magnitudes, σ)
+        end
+    end
+
+    return model(model_params.channels)
+end
+
+StructTypes.StructType(::typeof(inverted_model)) = StructTypes.StringType()
 
 
 function star_magnitude(phases; mass_quotient, observer_angle,
