@@ -34,8 +34,8 @@ md"### Визуализация направлений"
 
 # ╔═╡ 74d8becd-7529-47dd-bf4b-9b1cfe3f17de
 begin
-	mass_quotients = 0.001:0.01:10
-	interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), mass_quotients)
+	mass_quotients = 0.001:0.01:100
+	interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(5), mass_quotients)
 end
 
 # ╔═╡ 87a082a1-4e29-4702-acb0-35afc8e51735
@@ -63,29 +63,30 @@ end
 # ╔═╡ 3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
 begin
 	m = interpolated_mesh(1.)
+	m = apply_function(m, g -> g^0.08, :g, :T, 0) # dim = 0
+
 	m = avg_over_faces(m, :g)
-	m = apply_function(m, g -> g^0.08, :g, :T)
-	f = viz(domain(m), color = values(m, 2).T)
-	# cbar(f, values(m, 0).T)
+	m = apply_function(m, g -> g^0.08, :g, :T) # dim = 2
+
+	viz(domain(m), color = values(m, 2).T)
 end
 
 # ╔═╡ dc97eb59-95d8-4480-aef7-b51c0677e97f
-begin
-	m2 = interpolated_mesh(1.)
-	m2 = apply_function(m2, g -> g^0.08, :g, :T, 0)
-	m2 = avg_over_faces(m2, :T)
-	f2 = viz(domain(m2), color = values(m2, 0).T)
-end
+f = viz(domain(m), color = values(m, 0).T)
+
+# ╔═╡ 64d60fd8-49e7-44d9-a10c-b69bc7246894
+Makie.save("tex/pic_drafts/lemon-side-2.png", f)
 
 # ╔═╡ 692e28c0-ca1a-4186-8009-342a2e4efdb0
 begin
 	local temperatures = values(m, 2).T .* 3500.
-	plot(
+	pp = plot(
 		temperatures,
 		zcolor = temperatures,
 		colormap = :viridis,
-		format = :svg
+		format = :svg,
 	)
+	# savefig("tex/pic_drafts/cbar.svg")
 end
 
 # ╔═╡ 1f6a872e-5411-47e7-a642-97e9180af6c7
@@ -101,70 +102,96 @@ params = (;
 	temperature_at_bottom = 3500,
 	β = 0.08,
 	interpolated_mesh,
-	luminocity_function = black_body_K,
+	luminocity_function = phoenixK,
     darkening_function = claret_darkening,
 	darkening_coefs_interpolant = K_coefs_interpolant,
 )
 
+# ╔═╡ 3c8dfea2-e7cd-41be-a942-420e54646fcf
+begin
+	plot(title = "В разных каналах", xlabel = "phase", ylabel = "m", yflip = true, legend = :bottom)
+
+	local mgs = star_magnitude(phases; params...)
+	plot!(
+		phases,
+		mgs .- mgs[length(phases) ÷ 4 + 1],
+		label = "K"
+	)
+
+	mgs = star_magnitude(phases; params..., luminocity_function = phoenixJ, darkening_coefs_interpolant = J_coefs_interpolant)
+	plot!(
+		phases,
+		mgs .- mgs[length(phases) ÷ 4 + 1],
+		label = "J"
+	)
+end
+
 # ╔═╡ 08d08b9d-f632-49f6-8df6-c39d35b7dc27
 begin
-	plot(title = "При разной функции L = f(T)", xlabel = "phase", ylabel = "m", yflip = true)
+	plot(title = "При разной функции L = f(T), канал K", xlabel = "phase", ylabel = "m", yflip = true, legend = :bottom)
+
+	local mgs = star_magnitude(phases; params..., luminocity_function = black_body_K)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = black_body_K_rectangle),
-		label = "planck(λ, T) * width"
-	)
-	plot!(
-		phases,
-		star_magnitude(phases; params..., luminocity_function = black_body_K) .+ 0.015,
+		mgs .- mgs[length(phases) ÷ 4 + 1],
 		label = "∫planck(λ, T) dλ"
 	)
+
+	mgs = star_magnitude(phases; params..., luminocity_function = T_4)
 	plot!(
 		phases,
-		star_magnitude(phases; params..., luminocity_function = T_4) .+ 22.4,
+		mgs .- mgs[length(phases) ÷ 4 + 1],
 		label = "T^4"
 	)
-	
+
+	mgs = star_magnitude(phases; params..., luminocity_function = phoenixK)
+	plot!(
+		phases,
+		mgs .- mgs[length(phases) ÷ 4 + 1],
+		label = "phoenix K"
+	)
 end
 
-# ╔═╡ 878919d1-66ad-4ff4-9832-2fbb197ac01f
+# ╔═╡ 35712865-5378-4f09-94eb-6b4f9ff5790b
+plot(0 : 100 : 8000, phoenixK.(0 : 100 : 8000))
+
+# ╔═╡ 440a249f-c972-444c-8232-053232fad895
 begin
-	plot(xlabel = "phase", ylabel = "m", yflip = true)
-	magnitudes = star_magnitude(phases; params..., temperature_at_bottom = 2000)
-	plot!(
-		phases,
-		magnitudes .- magnitudes[1],
-		label = "T_bottom = 2000"
-	)
+	plot(title = "При разной температуре", xlabel = "phase", ylabel = "m", yflip = true, legend = :bottom)
 
-	magnitudes = star_magnitude(phases; params..., temperature_at_bottom = 3000)
-	plot!(
-		phases,
-		magnitudes .- magnitudes[1],
-		label = "T_bottom = 3000"
-	)
-
-	magnitudes = star_magnitude(phases; params..., temperature_at_bottom = 4000)
-	plot!(
-		phases,
-		magnitudes .- magnitudes[1],
-		label = "T_bottom = 4000"
-	)
+	for T_bottom ∈ [2400, 3400, 4400]
+		local mgs = star_magnitude(phases; params..., temperature_at_bottom = T_bottom)
 	
-end
-
-# ╔═╡ 11872494-739a-4ada-8572-733d1756b6a5
-begin
-	plot(title = "При разном соотношении масс", xlabel = "phase", ylabel = "m", yflip = true)
-	for q ∈ [0.1, 0.2, 0.4, 0.8, 1.6, 3.2]
 		plot!(
 			phases,
-			star_magnitude(phases; params..., mass_quotient = q, observer_angle = pi/3),
-			label = "q = $q"
+			mgs .- mgs[length(phases) ÷ 4 + 1],
+			label = T_bottom
 		)
 	end
 	plot!()
 end
+
+# ╔═╡ 48bbdefe-53cc-4712-8b4c-74af4dd8b3dd
+# При разном соотношении масс
+
+# ╔═╡ 570ba035-344a-4c40-83d9-4d4d8abca120
+begin
+	plotlyjs()
+	local phases = -0.25 : 0.01 : 0.75
+	ppp = plot(title = "Синтетические кривые блеска", xlabel = "Фаза", ylabel = "m", yflip = true, legend_title = "m_giant / m_dwarf", foreground_color_legend = nothing, legend = :outerright)
+	for q ∈ [0.1, 0.2, 0.4, 0.8, 1.6, 3.2]
+		local mgs = star_magnitude(phases .* 2π; params..., mass_quotient = 1/q)
+		plot!(
+			phases,
+			mgs .- mgs[length(phases) ÷ 4 + 1],
+			label = q
+		)
+	end
+	plot!()
+end
+
+# ╔═╡ 3048d4d4-3b3f-496b-b8e7-585a376d5024
+savefig(ppp, "tex/pic_drafts/curves.svg")
 
 # ╔═╡ 41327e56-5682-438b-bb91-a7acc918d589
 begin
@@ -201,77 +228,36 @@ end
 
 # ╔═╡ 4b1e0d61-d58a-4e64-a120-1da21c8ece50
 begin
-	plot(title = "С потемнением к краю и без", xlabel = "phase", ylabel = "m", yflip = true)
-	mgs = star_magnitude(phases; params..., darkening_function = one, darkening_coefs_interpolant = T -> ())
-	plot!(
-		phases,
-		mgs .- mgs[1],
-		label = "Без потемнения к краю"
-	)
+	plot(title = "С различным потемнением к краю", xlabel = "phase", ylabel = "m", yflip = true)
 
-	mgs = star_magnitude(phases; params..., darkening_coefs_interpolant = T -> darkening_coefficients)
-	plot!(
-		phases,
-		mgs .- mgs[1],
-		label = "С потемнением T = 3600"
-	)
-
-	mgs = star_magnitude(phases; params...,
-			darkening_coefs_interpolant = T -> darkening_coefficients2
-		)
-	plot!(
-		phases,
-		mgs .- mgs[1],
-		label = "С потемнением T = 2000"
-	)
-
-	mgs = star_magnitude(phases; params...)
-	plot!(
-		phases,
-		mgs .- mgs[1],
-		label = "С интерполированным потемнением"
-	)
-
-	mgs = star_magnitude(phases; params...,
-			darkening_coefs_interpolant = T -> K_coefs_interpolant(2500.)
-		)
-	plot!(
-		phases,
-		mgs .- mgs[1],
-		label = "С потемнением T = 2500"
-	)
-	plot!(legend = :bottomright)
-end
-
-# ╔═╡ a5d7d64d-e2a4-49bc-9541-543acf527403
-begin
-	plot(title = "С потемнением к краю и без", xlabel = "phase", ylabel = "m", yflip = true)
 	local mgs = star_magnitude(phases; params..., darkening_function = one, darkening_coefs_interpolant = T -> ())
 	plot!(
 		phases,
-		mgs .- mgs[1],
+		mgs .- mgs[length(phases) ÷ 4 + 1],
 		label = "Без потемнения к краю"
 	)
 
-	for T in 2000 : 200 : 3600
-		darkening_coefficients = K_coefs_interpolant(T)
-		mgs = star_magnitude(phases; params..., darkening_coefs_interpolant = T -> darkening_coefficients)
-	
-		plot!(
-			phases,
-			mgs .- mgs[1],
-			label = "T = $T"
-		)
+	mgs = star_magnitude(phases; params..., darkening_coefs_interpolant = T -> K_coefs_interpolant(3500))
+	plot!(
+		phases,
+		mgs .- mgs[length(phases) ÷ 4 + 1],
+		label = "С потемнением T = 3500"
+	)
 
-	end
+	mgs = star_magnitude(phases; params..., darkening_coefs_interpolant = T -> K_coefs_interpolant(2500))
+	plot!(
+		phases,
+		mgs .- mgs[length(phases) ÷ 4 + 1],
+		label = "С потемнением T = 2500"
+	)
 
 	mgs = star_magnitude(phases; params...)
 	plot!(
 		phases,
-		mgs .- mgs[1],
+		mgs .- mgs[length(phases) ÷ 4 + 1],
 		label = "С интерполированным потемнением"
 	)
-	plot!(legend = false)
+	plot!(legend = :outerleft)
 end
 
 # ╔═╡ 77e99a76-4303-42b2-bd4b-7a614552e24b
@@ -360,28 +346,12 @@ begin
 		claret_darkening(0.4, K_coefs_interpolant(T)...)
 		for T in T_list
 	]
-	plot(T_list, darkening_values)
-end
-
-# ╔═╡ 3eff4c2a-8049-4e22-bd8a-2a693f3039d0
-begin
-	cs = 0 : 0.01 : 1.
-	darks = claret_darkening.(cs, K_coefs_interpolant(3650)...)
-	plot(cs, darks)
-end
-
-# ╔═╡ 1a5ad403-6320-45f3-afd7-3280e4676e8b
-begin
-	local T_list = 2800 : 10 : 4400
-	local magnitudes = hcat([star_magnitude([0, π]; params..., temperature_at_bottom = T) for T ∈ T_list]...)
-
 	plot(
 		T_list,
-		magnitudes',
-		xlabel = "T_bottom",
-		ylabel = "m",
-		legend = false,
-		title = "Первый и второй минимум"
+		darkening_values,
+		title = "Потемнение к краю при фиксированном угле<br> в зависимости от температуры",
+		top_margin = 50Plots.px,
+		legend = false
 	)
 end
 
@@ -393,7 +363,7 @@ begin
 	plot(
 		q_list,
 		magnitudes',
-		#xlabel = "T_bottom",
+		xlabel = "масса гиганта / масса карлика",
 		ylabel = "m",
 		legend = false,
 		title = "Первый и второй минимум"
@@ -443,20 +413,24 @@ end
 # ╠═c72dec8c-9841-45af-bb0f-c0818102fe4f
 # ╠═3a8746b9-7348-4e60-8fa7-ec1ab2fe3841
 # ╠═dc97eb59-95d8-4480-aef7-b51c0677e97f
+# ╠═64d60fd8-49e7-44d9-a10c-b69bc7246894
 # ╠═692e28c0-ca1a-4186-8009-342a2e4efdb0
 # ╟─1f6a872e-5411-47e7-a642-97e9180af6c7
 # ╠═05465b1e-1b8e-4f76-9ae8-791e2de3c050
 # ╠═424af3e5-703b-46a1-be45-e87f78714517
+# ╠═3c8dfea2-e7cd-41be-a942-420e54646fcf
 # ╠═08d08b9d-f632-49f6-8df6-c39d35b7dc27
-# ╠═878919d1-66ad-4ff4-9832-2fbb197ac01f
-# ╠═11872494-739a-4ada-8572-733d1756b6a5
+# ╠═35712865-5378-4f09-94eb-6b4f9ff5790b
+# ╠═440a249f-c972-444c-8232-053232fad895
+# ╠═48bbdefe-53cc-4712-8b4c-74af4dd8b3dd
+# ╠═570ba035-344a-4c40-83d9-4d4d8abca120
+# ╠═3048d4d4-3b3f-496b-b8e7-585a376d5024
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
 # ╠═5b03df78-85f1-4f54-b814-9658f4666779
 # ╠═d88a8c9a-9afb-4f0e-95d8-3b60f0fcf22e
 # ╠═21085b08-dad7-4d62-963e-5355576be10b
 # ╠═e1cb3cb6-532d-43f8-beaa-646f8c1264fa
 # ╠═4b1e0d61-d58a-4e64-a120-1da21c8ece50
-# ╠═a5d7d64d-e2a4-49bc-9541-543acf527403
 # ╟─77e99a76-4303-42b2-bd4b-7a614552e24b
 # ╠═9d2f6321-0688-400a-b4db-7f3024c03326
 # ╠═65cbb252-cb0b-4db5-9244-c427dbc77f9c
@@ -466,8 +440,6 @@ end
 # ╠═d2871328-373d-4545-99f7-13e3e520d67b
 # ╠═977d23f8-cf69-4238-bc21-fc59f6ae960b
 # ╠═145d1f9f-316f-422d-b7f0-de4254405458
-# ╠═3eff4c2a-8049-4e22-bd8a-2a693f3039d0
-# ╠═1a5ad403-6320-45f3-afd7-3280e4676e8b
 # ╠═85490724-3011-4772-a9cb-e36c69d5a303
 # ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
 # ╠═2c716424-cf65-4141-b9ed-e282698ec438
