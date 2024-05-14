@@ -404,6 +404,55 @@ begin
 	all(cosines .> 0)
 end
 
+# ╔═╡ da015eb7-c907-4360-a938-d40ce9636159
+md"### Иллюстрация к алгоритму Катмулла-Кларка"
+
+# ╔═╡ 7718c0c6-29a6-4afe-a1a5-223dcd6f4484
+function tetra_sphere2(catmullclark_iterations)
+    box = Tetrahedron(
+        (-√2/3, -√2/√3, -1/3),
+        (0, 0, 1),
+        (2√2/3, 0, -1/3),
+        (-√2/3, √2/√3, -1/3),
+    ) |> boundary |> discretize
+
+    for _ ∈ 1 : catmullclark_iterations
+        box = refine(box, CatmullClark())
+    end
+
+    points = map(vertices(box)) do point
+        coords = coordinates(point)
+        coords = coords ./ norm(coords)
+        Point(coords...)
+    end
+
+    return SimpleMesh(points, topology(box))
+end
+
+# ╔═╡ 79f54697-74f6-44e3-8104-7f23a33fd28e
+ccf0 = viz(tetra_sphere2(0), showfacets = true)
+
+# ╔═╡ 4f71488d-96f2-41b0-8c6c-580c71dcae1b
+Makie.save("tex/pic_drafts/cc0.png", ccf0)
+
+# ╔═╡ 91362a9a-e8f9-4ca6-b428-9f3da33fa2e6
+ccf1 = viz(tetra_sphere2(1), showfacets = true)
+
+# ╔═╡ 74a95289-dcb5-4bb0-a2b3-51852b1738d4
+Makie.save("tex/pic_drafts/cc1.png", ccf1)
+
+# ╔═╡ a089cc54-5e7e-43cc-9d49-cf05877fed9b
+ccf2 = viz(tetra_sphere2(2), showfacets = true)
+
+# ╔═╡ c1630c0f-23b4-45c7-93fc-69da80f373ef
+Makie.save("tex/pic_drafts/cc2.png", ccf2)
+
+# ╔═╡ 574ed639-5b3d-4663-83b5-5f3427324d6a
+ccf3 = viz(tetra_sphere2(3), showfacets = true)
+
+# ╔═╡ b56099f2-b5a5-4aca-b266-07d88d092d48
+Makie.save("tex/pic_drafts/cc3.png", ccf3)
+
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
 # ╠═243eae5b-8f0a-4246-8f2e-3de35bb3941a
@@ -449,3 +498,13 @@ end
 # ╠═e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
 # ╠═10e128c6-1cf4-484e-bd33-02b28e428973
 # ╠═ae2187d9-9f14-4c8a-9605-f1883969c66f
+# ╟─da015eb7-c907-4360-a938-d40ce9636159
+# ╠═7718c0c6-29a6-4afe-a1a5-223dcd6f4484
+# ╠═79f54697-74f6-44e3-8104-7f23a33fd28e
+# ╠═4f71488d-96f2-41b0-8c6c-580c71dcae1b
+# ╠═91362a9a-e8f9-4ca6-b428-9f3da33fa2e6
+# ╠═74a95289-dcb5-4bb0-a2b3-51852b1738d4
+# ╠═a089cc54-5e7e-43cc-9d49-cf05877fed9b
+# ╠═c1630c0f-23b4-45c7-93fc-69da80f373ef
+# ╠═574ed639-5b3d-4663-83b5-5f3427324d6a
+# ╠═b56099f2-b5a5-4aca-b266-07d88d092d48
