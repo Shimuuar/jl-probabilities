@@ -29,6 +29,9 @@ end
 # ╔═╡ 2408848a-e855-44cb-9b4f-3c6ced602e07
 using Dates
 
+# ╔═╡ 7feb762a-96d3-4b74-8a0a-cd3ff0c2a352
+using HypothesisTests
+
 # ╔═╡ 0a209f5e-bd22-4072-9247-c0ddcd42fdb8
 begin
 	points = readdlm("stars/T_CrB_JK.dat")[2:end, :]
@@ -315,6 +318,12 @@ histogram(differences(model_params, MAP_1)[1], nbins = 20)
 # ╔═╡ 360c7b42-5f18-4137-ac62-e747b47501ff
 differences(model_params, MAP_1)
 
+# ╔═╡ fac51a59-200f-4413-a63e-46571e31f324
+md"### Runs Test"
+
+# ╔═╡ e104d63f-603c-452d-916b-08be782834ce
+WaldWolfowitzTest(differences(model_params, MAP_1)[1])
+
 # ╔═╡ Cell order:
 # ╠═11decfb6-8f0a-11ee-1bf8-d3faf8756b8b
 # ╠═0a209f5e-bd22-4072-9247-c0ddcd42fdb8
@@ -352,3 +361,6 @@ differences(model_params, MAP_1)
 # ╠═c5ad427c-c144-4cc2-b531-ff830beaa21e
 # ╠═6aded0f0-c6b3-4bf2-872c-eb9b264caf00
 # ╠═360c7b42-5f18-4137-ac62-e747b47501ff
+# ╟─fac51a59-200f-4413-a63e-46571e31f324
+# ╠═7feb762a-96d3-4b74-8a0a-cd3ff0c2a352
+# ╠═e104d63f-603c-452d-916b-08be782834ce

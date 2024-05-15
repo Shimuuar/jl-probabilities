@@ -28,6 +28,9 @@ end
 # ╔═╡ 33b862f3-dc6a-46fe-b73e-a7df7af22e92
 using JSON3, SHA
 
+# ╔═╡ 7c9ff7d7-7785-4900-bf29-1bad76947fe1
+using LaTeXStrings
+
 # ╔═╡ 30d54c72-876b-4d01-b818-b683ffbc400d
 using Roots
 
@@ -48,7 +51,7 @@ begin
 end
 
 # ╔═╡ e28e8c98-caa0-41c0-bb15-53c6679dda6d
-pgram = lombscargle(points.day, points.K)
+pgram = lombscargle(points.day, points.K, samples_per_peak = 100)
 
 # ╔═╡ 55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
 plot(
@@ -59,13 +62,7 @@ plot(
 )
 
 # ╔═╡ 5b2930bc-2de0-4388-824a-190d1169cbfe
-begin
-	estimated_period = 2findmaxperiod(pgram)[1]
-	findmaxperiod(pgram)
-end
-
-# ╔═╡ 7e8b804f-b511-4359-8c44-286743a2ff9b
-estimated_period
+estimated_period = 2findmaxperiod(pgram)[1]
 
 # ╔═╡ 2fe448f3-1744-4bbb-83e7-290a9214e7c8
 interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), 0.1:0.1:10)
@@ -216,14 +213,13 @@ function plot_rubbish(model_params, samples)
 	p
 end
 
-# ╔═╡ 960ab30d-a1fa-4803-a4d4-d0860286ba87
+# ╔═╡ 2a542b29-8d3e-49cc-bc8c-2116c6d544f8
 initial_params = (;
-	mass_quotient = 0.5,
-	initial_phase = -1.45,
-	observer_angle = π/2 - 0.1,
-	temperature_at_bottom = 3500.,
-	σ_common = [0.1, 0.1],
-	offset = [18.84, 21.15],
+	mass_quotient = 1.38208,
+	observer_angle = 0.981023,
+	initial_phase = -1.46867,
+	σ_common = [0.023195, 0.0272215],
+	offset = [46.6894, 48.8942],
 )
 
 # ╔═╡ 30a74a85-c431-469c-bf3d-00190db36c56
@@ -233,7 +229,7 @@ channels = [
 		measurements_y = points.K,
 		darkening_function = claret_darkening,
 		darkening_coefs_interpolant = K_coefs_interpolant,
-		luminocity_function = black_body_K,
+		luminocity_function = phoenixK,
 		σ_measured = points.K_err,
 		σ_common = FlatPos(0.),
 	)
@@ -242,7 +238,7 @@ channels = [
 		measurements_y = points.J,
 		darkening_function = claret_darkening,
 		darkening_coefs_interpolant = J_coefs_interpolant,
-		luminocity_function = black_body_J,
+		luminocity_function = phoenixJ,
 		σ_measured = points.J_err,
 		σ_common = FlatPos(0.),
 	)
@@ -291,7 +287,7 @@ plot(samples, margin = 10Plots.px, bottom_margin = 50Plots.px)
 # ╔═╡ 43973ad5-74c8-4bb7-92c2-372e6fb722dd
 density(
 	1 ./ samples[:mass_quotient],
-	title = "Масса гиганта / масса карлика",
+	xlabel = "q = m_giant / m_dwarf при априорном q⁻¹ ~ Uniform",
 	legend = false,
 	size = (600, 300),
 	xlim = (0, 2)
@@ -303,7 +299,7 @@ density(
 	title = "Начальная фаза (в долях периода)",
 	legend = false,
 	size = (600, 300),
-	xlim = (-0.265, -0.23)
+	#xlim = (-0.265, -0.23)
 )
 
 # ╔═╡ 9a192e6e-f8ac-48fc-a7c3-7cbc5ebe7554
@@ -412,12 +408,11 @@ end
 # ╠═e28e8c98-caa0-41c0-bb15-53c6679dda6d
 # ╠═55c8d8ef-9d4b-4b9c-8838-b91f1f53f8b0
 # ╠═5b2930bc-2de0-4388-824a-190d1169cbfe
-# ╠═7e8b804f-b511-4359-8c44-286743a2ff9b
 # ╠═2fe448f3-1744-4bbb-83e7-290a9214e7c8
 # ╠═d9b9b851-cca0-4a40-a627-7dec9c5da6c1
 # ╠═275cb92f-d5d1-4fb9-acb3-5d2317f84a2b
 # ╠═232ace15-13a9-4afe-9468-d6e54d796470
-# ╠═960ab30d-a1fa-4803-a4d4-d0860286ba87
+# ╠═2a542b29-8d3e-49cc-bc8c-2116c6d544f8
 # ╠═00044db4-b168-44be-9d39-87d27b7d330d
 # ╠═30a74a85-c431-469c-bf3d-00190db36c56
 # ╠═97fd2129-d706-480c-a97d-9804027d8b40
@@ -429,6 +424,7 @@ end
 # ╠═174cd8b8-1d1c-4141-a170-6f978f5195e1
 # ╠═15ae4b29-3d14-4ad1-811d-de973095f25d
 # ╠═45422b39-64d5-4a75-b8c0-8ba0011ba089
+# ╠═7c9ff7d7-7785-4900-bf29-1bad76947fe1
 # ╠═43973ad5-74c8-4bb7-92c2-372e6fb722dd
 # ╠═8ec7dad5-b377-43df-8a7f-ad8c9179d7e2
 # ╠═9a192e6e-f8ac-48fc-a7c3-7cbc5ebe7554

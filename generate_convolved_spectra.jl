@@ -16,6 +16,7 @@ begin
 
 	using Plots
 	plotlyjs()
+	theme(:juno)
 end
 
 # ╔═╡ 28a2baf2-d13e-4ee3-998b-f85b941e45b5
