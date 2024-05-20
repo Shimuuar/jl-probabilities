@@ -5,6 +5,7 @@ using SHA
 
 using JSON3
 using Turing
+using FillArrays
 
 export
     cached_sample,
@@ -37,7 +38,8 @@ function _uncached_sample(chain_params)
 
     if chain_params.init_params !== nothing
         syms = DynamicPPL.syms(DynamicPPL.VarInfo(model))
-        init_params_array = chain_params.init_params[syms]
+        init_params = chain_params.init_params[syms]
+        init_params_array = FillArrays.Fill(init_params, chain_params.n_chains)
     else
         init_params_array = nothing
     end
@@ -45,8 +47,10 @@ function _uncached_sample(chain_params)
     return sample(
         model,
         chain_params.sampler,
+        MCMCThreads(),
         chain_params.n_samples,
-        initial_params=init_params_array
+        chain_params.n_chains,
+        initial_params=init_params_array 
     )
 end
 
