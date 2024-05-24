@@ -5,6 +5,8 @@ using StructTypes
 using Meshes
 using Revise
 
+# using Metal
+
 include("Roche.jl")
 include("LuminocityFunctions.jl")
 
@@ -18,7 +20,8 @@ export
     ChainParams,
     first_model,
     inverted_model,
-    star_magnitude
+    star_magnitude,
+    star_magnitude_GPU
 
 
 @kwdef struct MeshParams
@@ -209,5 +212,67 @@ function star_magnitude(phases; mass_quotient, observer_angle,
     ]
     return @. -2.5 * log10(luminocities)
 end
+
+
+
+
+
+# function star_magnitude_GPU(phases; mass_quotient, observer_angle,
+#                         temperature_at_bottom, β, interpolated_mesh,
+#                         luminocity_function, darkening_function, darkening_coefs_interpolant)
+
+#     directions = [(
+#         Float32(sin(observer_angle) * cos(phase)),
+#         Float32(sin(observer_angle) * sin(phase)),
+#         Float32(cos(observer_angle))
+#     ) for phase ∈ phases] |> mtl
+
+#     function temperature(g)
+#         return temperature_at_bottom * abs(g)^β
+#     end
+
+#     mesh = interpolated_mesh(mass_quotient)
+#     mesh = avg_over_faces(mesh, :g)
+#     mesh = apply_function(mesh, temperature, :g, :T)
+#     mesh = apply_function(mesh, luminocity_function, :T, :L)
+#     mesh = apply_function(mesh, darkening_coefs_interpolant, :T, :darkening_coefs)
+
+#     normals = calc_function_on_faces(mesh, normalized_normal) .|> Meshes.Vec3f |> mtl
+#     areas = calc_function_on_faces(mesh, area) |> mtl
+#     Ls = values(mesh, 2).L |> mtl
+#     darkening_coefs = values(mesh, 2).darkening_coefs .|> Meshes.Vec{4, Float32} |> mtl
+
+#     luminocities = Metal.zeros(length(directions), length(normals))
+
+#     function add_face(directions, normals, areas, Ls, darkening_coefs)
+#         direction_no, face_no = thread_position_in_grid_2d()
+#         if direction_no > length(directions) || face_no > length(normals)
+#             return
+#         end
+#         direction = directions[direction_no]
+#         normal = normals[face_no]
+#         area = areas[face_no]
+#         L = Ls[face_no]
+#         darkening_coef = darkening_coefs[face_no]
+
+#         cosine = direction ⋅ normal
+#         if cosine < zero(cosine)
+#             return
+#         else
+#             darkening = darkening_function(cosine, darkening_coef...)
+#             luminocities[direction_no, face_no] += cosine * area * L * darkening
+#             return
+#         end
+#     end
+
+#     grid = (length(directions), length(normals))
+#     @metal groups=grid add_face(directions, normals, areas, Ls, darkening_coefs)
+
+#     luminocities_ = sum(luminocities, dims=2)
+
+#     return Float32(-2.5) .* log10.(luminocities_)
+# end
+
+
 
 end

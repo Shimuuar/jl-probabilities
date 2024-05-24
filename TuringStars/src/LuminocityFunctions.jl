@@ -96,7 +96,8 @@ StructTypes.StructType(::typeof(phoenixK)) = StructTypes.StringType()
 function claret_darkening(cosine, a1, a2, a3, a4)
     μ = cosine
     sqrt_μ = √μ
-    1. - a1 * (1 - sqrt_μ) - a2 * (1 - μ) - a3 * (1 - sqrt_μ^3) - a4 * (1 - μ^2)
+    I = one(μ)
+    I - a1 * (I - sqrt_μ) - a2 * (I - μ) - a3 * (I - sqrt_μ^3) - a4 * (I - μ^2)
 end
 
 one1(x) = 1.
