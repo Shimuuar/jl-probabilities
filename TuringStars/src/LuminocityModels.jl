@@ -26,7 +26,7 @@ export
 
 @kwdef struct MeshParams
     catmullclark_iterations::Int = 4
-    mass_quotient_nodes = 0.1 : 0.1 : 10.
+    mass_quotient_nodes = 0.01 : 0.01 : 10.
 end
 
 @kwdef struct ModelParams
