@@ -294,7 +294,7 @@ end
 PyPlot.svg(true)
 
 # ╔═╡ 2076e26c-12c1-4e34-a530-b13d71182f9e
-function biplot(samples, levels, color, ax = nothing)
+function biplot(samples, levels, color = "black", ax = nothing)
 	if ax == nothing
 		ax = PyPlot.gca()
 	end
@@ -319,7 +319,7 @@ function biplot(samples, levels, color, ax = nothing)
 end
 
 # ╔═╡ c8f10134-2c3d-4271-baba-bc0abcb914cc
-biplot(samples, [0.95, 0.68, 0])
+biplot(samples, [0.95, 0.68, 0], "black")
 
 # ╔═╡ Cell order:
 # ╠═25ce51bc-19cb-11ef-22af-9d2f1925f669

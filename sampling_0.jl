@@ -291,11 +291,14 @@ function get_threshold(kde, confidence_level)
 	)
 end
 
+# ╔═╡ 7853f148-3cfc-4def-946b-eadac15159ad
+ess(samples)
+
 # ╔═╡ bc02da53-f9aa-439d-884e-87cd39da7f1f
 PyPlot.svg(true)
 
 # ╔═╡ 91bca842-224b-42a2-9ad6-6b337366e474
-function biplot(samples, levels, color, ax = nothing)
+function biplot(samples, levels, color = "black", ax = nothing)
 	if ax == nothing
 		ax = PyPlot.gca()
 	end
@@ -348,6 +351,7 @@ biplot(samples, [0.95, 0.68, 0])
 # ╠═f3735b8f-7d73-4bad-be3e-4012d5b14a10
 # ╠═017a39e2-a149-4cc6-befa-438911b87ec6
 # ╠═884089d1-a9ba-41d0-85a6-8ce7de83cb2f
+# ╠═7853f148-3cfc-4def-946b-eadac15159ad
 # ╠═bc02da53-f9aa-439d-884e-87cd39da7f1f
 # ╠═91bca842-224b-42a2-9ad6-6b337366e474
 # ╠═5158fa88-c07a-4406-9f30-7ac5814ed8a2

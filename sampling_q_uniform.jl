@@ -293,7 +293,7 @@ end
 PyPlot.svg(true)
 
 # ╔═╡ 2076e26c-12c1-4e34-a530-b13d71182f9e
-function biplot(samples, levels, color, ax = nothing)
+function biplot(samples, levels, color = "black", ax = nothing)
 	if ax == nothing
 		ax = PyPlot.gca()
 	end
