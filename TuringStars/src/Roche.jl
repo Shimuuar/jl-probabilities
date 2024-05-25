@@ -156,6 +156,10 @@ function InterpolatedRocheMesh(spherical_mesh::SimpleMesh, mass_quotient_knots)
     return InterpolatedRocheMesh(spherical_mesh, mass_quotient_knots, r_interpolants, g_interpolants)
 end
 
+InterpolatedRocheMesh(mesh_params) = InterpolatedRocheMesh(
+    tetra_sphere(mesh_params.catmullclark_iterations),
+    mesh_params.mass_quotient_nodes
+)
 
 """
 Создаёт сферическую сетку, используя алгоритм Катмулла-Кларка.

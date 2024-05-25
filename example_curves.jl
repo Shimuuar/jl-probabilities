@@ -35,7 +35,7 @@ md"### Визуализация направлений"
 # ╔═╡ 74d8becd-7529-47dd-bf4b-9b1cfe3f17de
 begin
 	mass_quotients = 0.001:0.01:100
-	interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(5), mass_quotients)
+	interpolated_mesh = InterpolatedRocheMesh(tetra_sphere(4), mass_quotients)
 end
 
 # ╔═╡ 87a082a1-4e29-4702-acb0-35afc8e51735
@@ -75,7 +75,7 @@ end
 f = viz(domain(m), color = values(m, 0).T)
 
 # ╔═╡ 64d60fd8-49e7-44d9-a10c-b69bc7246894
-Makie.save("tex/pic_drafts/lemon-side-2.png", f)
+# Makie.save("tex/pic_drafts/lemon-side-2.png", f)
 
 # ╔═╡ 692e28c0-ca1a-4186-8009-342a2e4efdb0
 begin
@@ -153,13 +153,33 @@ begin
 end
 
 # ╔═╡ 35712865-5378-4f09-94eb-6b4f9ff5790b
-plot(0 : 100 : 8000, phoenixK.(0 : 100 : 8000))
+begin
+	local Ts = 0 : 100 : 8000
+	plot(Ts, phoenixK.(Ts), label = "K")
+	plot!(Ts, phoenixJ.(Ts), label = "J")
+end
 
 # ╔═╡ 440a249f-c972-444c-8232-053232fad895
 begin
 	plot(title = "При разной температуре", xlabel = "phase", ylabel = "m", yflip = true, legend = :bottom)
 
 	for T_bottom ∈ [2400, 3400, 4400]
+		local mgs = star_magnitude(phases; params..., temperature_at_bottom = T_bottom)
+	
+		plot!(
+			phases,
+			mgs .- mgs[length(phases) ÷ 4 + 1],
+			label = T_bottom
+		)
+	end
+	plot!()
+end
+
+# ╔═╡ 0d42b134-7d0b-45c7-9de5-edc52558a9f5
+begin
+	plot(title = "При разной температуре", xlabel = "phase", ylabel = "m", yflip = true, legend = :bottom)
+
+	for T_bottom ∈ [3400, 3500, 3600]
 		local mgs = star_magnitude(phases; params..., temperature_at_bottom = T_bottom)
 	
 		plot!(
@@ -180,6 +200,22 @@ begin
 	local phases = -0.25 : 0.01 : 0.75
 	ppp = plot(title = "Синтетические кривые блеска", xlabel = "Фаза", ylabel = "m", yflip = true, legend_title = "m_giant / m_dwarf", foreground_color_legend = nothing, legend = :outerright)
 	for q ∈ [0.1, 0.2, 0.4, 0.8, 1.6, 3.2]
+		local mgs = star_magnitude(phases .* 2π; params..., mass_quotient = 1/q)
+		plot!(
+			phases,
+			mgs .- mgs[length(phases) ÷ 4 + 1],
+			label = q
+		)
+	end
+	plot!()
+end
+
+# ╔═╡ 4acfab6d-a8a2-471a-bacb-6c058a24490b
+begin
+	plotlyjs()
+	local phases = -0.25 : 0.01 : 0.75
+	plot(title = "Синтетические кривые блеска", xlabel = "Фаза", ylabel = "m", yflip = true, legend_title = "m_giant / m_dwarf", foreground_color_legend = nothing, legend = :outerright)
+	for q ∈ [0.6, 0.8]
 		local mgs = star_magnitude(phases .* 2π; params..., mass_quotient = 1/q)
 		plot!(
 			phases,
@@ -309,21 +345,6 @@ begin
 	)
 end
 
-# ╔═╡ d2871328-373d-4545-99f7-13e3e520d67b
-begin
-	local T_list = 2800 : 10 : 4400
-	local diffs = [diff_max_min(; params..., temperature_at_bottom = T, darkening_coefs_interpolant = T -> K_coefs_interpolant(3500.)) for T ∈ T_list]
-	local diffs2 = [diff_max_min2(; params..., temperature_at_bottom = T, darkening_coefs_interpolant = T -> K_coefs_interpolant(3500.)) for T ∈ T_list]
-	plot(
-		T_list,
-		[diffs diffs2],
-		xlabel = "T_bottom",
-		ylabel = "Δm",
-		legend = false,
-		title = "Глубины минимумов"
-	)
-end
-
 # ╔═╡ 977d23f8-cf69-4238-bc21-fc59f6ae960b
 begin
 	local T_list = 2800 : 10 : 4400
@@ -370,6 +391,53 @@ begin
 	)
 end
 
+# ╔═╡ 50316b3b-f689-4564-a03d-5525b7d297de
+begin
+	plot(title = "J-K (PHOENIX)", xlabel = "T_bottom", ylabel = "m")
+
+	local Ts = 2300 : 100 : 4900
+
+	local phase = -3 : 3
+
+	local mgsK = [star_magnitude(phase; params..., temperature_at_bottom = T) for T in Ts]
+
+	local mgsJ = [star_magnitude(phase; params..., luminocity_function = phoenixJ, darkening_coefs_interpolant = J_coefs_interpolant, temperature_at_bottom = T) for T in Ts]
+
+	plot!(
+		Ts,
+		(hcat(mgsJ...) .- hcat(mgsK...))',
+		labels = collect(phase)',
+		legend_title = "phase",
+	)
+end
+
+# ╔═╡ 518888ce-69a5-4896-af2f-b8573ed4e77e
+narrow_J = TuringStars.LuminocityFunctions.make_interpolation_of_planck_integral(
+    1.25e-6,
+    0.2e-6,
+    0 : 100 : 100_000
+)
+
+# ╔═╡ 7d15f9ce-37e5-4d54-8ff2-0c4a75ff6255
+begin
+	plot(title = "J-K (black-body спектр)", xlabel = "T_bottom", ylabel = "m")
+
+	local Ts = 2300 : 100 : 10_000
+
+	local phase = -3 : 3
+
+	local mgsK = [star_magnitude(phase; params..., luminocity_function = black_body_K, temperature_at_bottom = T) for T in Ts]
+
+	local mgsJ = [star_magnitude(phase; params..., luminocity_function = black_body_J, darkening_coefs_interpolant = J_coefs_interpolant, temperature_at_bottom = T) for T in Ts]
+
+	plot!(
+		Ts,
+		(hcat(mgsJ...) .- hcat(mgsK...))',
+		labels = collect(phase)',
+		legend_title = "phase",
+	)
+end
+
 # ╔═╡ 6fbfd8b0-19bc-417f-8fb8-9345086685f3
 md"### Скорость интегрирования с кешированием нормалей"
 
@@ -389,11 +457,14 @@ d = (1/√2, 1/√2, 0.)
 # ╔═╡ 8f373d53-15f4-4c6a-91fe-cc12c9726285
 @code_warntype integrate_data_over_mesh(mesh, :g, d, normals, areas, claret_darkening, K_coefs_interpolant)
 
-# ╔═╡ e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
-@btime star_magnitude(phases; params...)
+# ╔═╡ 3aa3fc82-f554-416b-af8d-44bd9b597afb
+phases_ = -π : 0.03 : π 
 
-# ╔═╡ 10e128c6-1cf4-484e-bd33-02b28e428973
-length(phases) * 6.25 / 1000
+# ╔═╡ 3400b562-7bff-4e5a-9c6e-9ebf4fd5df10
+length(phases_)
+
+# ╔═╡ e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
+@btime star_magnitude(phases_; params...)
 
 # ╔═╡ ae2187d9-9f14-4c8a-9605-f1883969c66f
 begin
@@ -439,19 +510,19 @@ Makie.save("tex/pic_drafts/cc0.png", ccf0)
 ccf1 = viz(tetra_sphere2(1), showfacets = true)
 
 # ╔═╡ 74a95289-dcb5-4bb0-a2b3-51852b1738d4
-Makie.save("tex/pic_drafts/cc1.png", ccf1)
+#Makie.save("tex/pic_drafts/cc1.png", ccf1)
 
 # ╔═╡ a089cc54-5e7e-43cc-9d49-cf05877fed9b
 ccf2 = viz(tetra_sphere2(2), showfacets = true)
 
 # ╔═╡ c1630c0f-23b4-45c7-93fc-69da80f373ef
-Makie.save("tex/pic_drafts/cc2.png", ccf2)
+# Makie.save("tex/pic_drafts/cc2.png", ccf2)
 
 # ╔═╡ 574ed639-5b3d-4663-83b5-5f3427324d6a
 ccf3 = viz(tetra_sphere2(3), showfacets = true)
 
 # ╔═╡ b56099f2-b5a5-4aca-b266-07d88d092d48
-Makie.save("tex/pic_drafts/cc3.png", ccf3)
+# Makie.save("tex/pic_drafts/cc3.png", ccf3)
 
 # ╔═╡ Cell order:
 # ╠═0f19eafc-6338-11ee-346c-d781d36c948a
@@ -471,8 +542,10 @@ Makie.save("tex/pic_drafts/cc3.png", ccf3)
 # ╠═08d08b9d-f632-49f6-8df6-c39d35b7dc27
 # ╠═35712865-5378-4f09-94eb-6b4f9ff5790b
 # ╠═440a249f-c972-444c-8232-053232fad895
+# ╠═0d42b134-7d0b-45c7-9de5-edc52558a9f5
 # ╠═48bbdefe-53cc-4712-8b4c-74af4dd8b3dd
 # ╠═570ba035-344a-4c40-83d9-4d4d8abca120
+# ╠═4acfab6d-a8a2-471a-bacb-6c058a24490b
 # ╠═3048d4d4-3b3f-496b-b8e7-585a376d5024
 # ╠═41327e56-5682-438b-bb91-a7acc918d589
 # ╠═5b03df78-85f1-4f54-b814-9658f4666779
@@ -486,17 +559,20 @@ Makie.save("tex/pic_drafts/cc3.png", ccf3)
 # ╠═a6655229-a4ce-4691-81fe-0da0d76bb249
 # ╠═76f7b84b-defe-4881-bbfa-459f2bc8aac7
 # ╠═b6eed0d3-f260-477d-99a4-1826ab7eb565
-# ╠═d2871328-373d-4545-99f7-13e3e520d67b
 # ╠═977d23f8-cf69-4238-bc21-fc59f6ae960b
 # ╠═145d1f9f-316f-422d-b7f0-de4254405458
 # ╠═85490724-3011-4772-a9cb-e36c69d5a303
+# ╠═50316b3b-f689-4564-a03d-5525b7d297de
+# ╠═518888ce-69a5-4896-af2f-b8573ed4e77e
+# ╠═7d15f9ce-37e5-4d54-8ff2-0c4a75ff6255
 # ╟─6fbfd8b0-19bc-417f-8fb8-9345086685f3
 # ╠═2c716424-cf65-4141-b9ed-e282698ec438
 # ╠═f457d950-a90f-4726-b132-f5f6ceaee8e3
 # ╠═16bbab2a-43ff-432a-af10-d83ac1a7aa4b
 # ╠═8f373d53-15f4-4c6a-91fe-cc12c9726285
+# ╠═3aa3fc82-f554-416b-af8d-44bd9b597afb
+# ╠═3400b562-7bff-4e5a-9c6e-9ebf4fd5df10
 # ╠═e84edaed-0c3b-4f2c-9f6e-e7d1880d0d31
-# ╠═10e128c6-1cf4-484e-bd33-02b28e428973
 # ╠═ae2187d9-9f14-4c8a-9605-f1883969c66f
 # ╟─da015eb7-c907-4360-a938-d40ce9636159
 # ╠═7718c0c6-29a6-4afe-a1a5-223dcd6f4484
