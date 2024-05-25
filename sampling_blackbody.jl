@@ -108,7 +108,7 @@ chain_params = ChainParams(;
 	model_params,
 	channels,
 	init_params,
-	n_samples = 128
+	n_samples = 4096
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -298,11 +298,9 @@ end
 PyPlot.svg(true)
 
 # ╔═╡ 91bca842-224b-42a2-9ad6-6b337366e474
-function biplot(samples, levels, figure = nothing)
-	if figure == nothing
-		figure = PyPlot.figure()
-		figure.gca().set_xlabel("Масса гиганта / масса карлика")
-		figure.gca().set_ylabel("Наклонение (°)")
+function biplot(samples, levels, color, ax = nothing)
+	if ax == nothing
+		ax = PyPlot.gca()
 	end
 
 	k = kde((
@@ -310,17 +308,18 @@ function biplot(samples, levels, figure = nothing)
 		reshape(rad2deg.(samples[:observer_angle]), :),
 	))
 
-	mx = maximize(x -> pdf(k, x[1], x[2]), [0.8, 60.])
+	mx = maximize(x -> pdf(k, x[1], x[2]), [0.5, 50.])
 	max_point = Optim.maximizer(mx)
 
 	thresholds = get_threshold.(Ref(k), levels)
 
-	PyPlot.contour(
+	ax.contour(
 		k.x, k.y, k.density',
-		levels = thresholds
+		levels = thresholds,
+		colors = color,
 	)
-	PyPlot.scatter([max_point[1]], [max_point[2]])
-	figure
+	ax.scatter([max_point[1]], [max_point[2]], color = color)
+	PyPlot.gcf()
 end
 
 # ╔═╡ 5158fa88-c07a-4406-9f30-7ac5814ed8a2
