@@ -14,6 +14,7 @@ begin
 
 	using DelimitedFiles
 	using DataFrames
+	using CSV
 
 	using Turing
 
@@ -185,6 +186,12 @@ samples = cached_sample(chain_params)
 # ╔═╡ ee35822f-7417-4d48-b799-1751d1f76f8f
 (samples.info.stop_time - samples.info.start_time) / length(samples)
 
+# ╔═╡ de408e58-efb8-4c7e-9415-d6e38e747d3f
+begin
+	sampled_values = samples[collect(values(samples.info.varname_to_symbol))]
+	CSV.write("samples/0.csv", sampled_values)
+end;
+
 # ╔═╡ 994aeb01-a8fb-4c15-af3e-f367fb237ae8
 begin
 	local p = plot_points_days(channels, period)
@@ -335,6 +342,7 @@ biplot(samples, [0.95, 0.68, 0])
 # ╠═4513a94d-e0af-4842-b9cb-03a3176acfe3
 # ╠═0c11e705-9921-4343-8ca9-b54ed3499af2
 # ╠═ee35822f-7417-4d48-b799-1751d1f76f8f
+# ╠═de408e58-efb8-4c7e-9415-d6e38e747d3f
 # ╠═994aeb01-a8fb-4c15-af3e-f367fb237ae8
 # ╠═fa3c2c79-6de1-4c4e-b6ef-93983917779a
 # ╠═3cbab8f9-9416-4a17-8cf8-d5873a67dc72

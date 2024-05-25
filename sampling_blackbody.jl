@@ -14,6 +14,7 @@ begin
 
 	using DelimitedFiles
 	using DataFrames
+	using CSV
 
 	using Turing
 
@@ -90,7 +91,15 @@ begin
 	local offset = [18.85, 21.17]
 	local log_σ_common = log.([0.01, 0.01])
 
-	init_params = (; m_giant, m_dwarf, mass_quotient, cos_i, observer_angle, initial_phase, offset, (Symbol("offset[$i]") => offset[i] for i ∈ 1 : length(offset))..., log_σ_common)
+	init_params = (; m_giant, m_dwarf, mass_quotient, cos_i, observer_angle, initial_phase, offset, log_σ_common)
+end
+
+# ╔═╡ 81a1e646-8e76-44cb-8302-5ec00134599e
+function group_symbols(sample)
+	if isa(sample, Chains)
+		sample = get_params(sample)
+	end
+	sample
 end
 
 # ╔═╡ c330906f-36e8-4b53-b0fc-a4b632024169
@@ -149,10 +158,10 @@ function plot_lines_days(model_params, interpolated_mesh,
 
 	for (c, (channel, subplot)) ∈ enumerate(zip(channels, p.subplots))
 		for i ∈ 1 : length(samples)
-			sample = samples[i]
+			sample = group_symbols(samples[i])
 
 			phases = reshape(phases_ .+ sample[:initial_phase], :)
-			magnitudes = star_magnitude(phases, interpolated_mesh, model_params, channel, sample) .+ sample[Symbol("offset[$c]")]
+			magnitudes = star_magnitude(phases, interpolated_mesh, model_params, channel, sample) .+ sample[:offset][c]
 
 			plot!(
 				subplot,
@@ -179,6 +188,12 @@ samples = cached_sample(chain_params)
 
 # ╔═╡ 238b0807-35a4-40b9-b14e-1fabdd98cf3f
 (samples.info.stop_time - samples.info.start_time) / length(samples)
+
+# ╔═╡ e6821d90-c833-4b6c-9af1-433aba401571
+begin
+	sampled_values = samples[collect(values(samples.info.varname_to_symbol))]
+	CSV.write("samples/black_body.csv", sampled_values)
+end;
 
 # ╔═╡ 994aeb01-a8fb-4c15-af3e-f367fb237ae8
 begin
@@ -240,9 +255,9 @@ function plot_ribbon_phases(model_params, interpolated_mesh,
 		vals = Array{Float64}(undef, length(samples), length(phases))
 
 		for s ∈ 1 : length(samples)
-			sample = samples[s]
+			sample = group_symbols(samples[s])
 
-			vals[s, :] = star_magnitude(phases .* 2π, interpolated_mesh, model_params, channel, sample) .+ sample[Symbol("offset[$c]")]
+			vals[s, :] = star_magnitude(phases .* 2π, interpolated_mesh, model_params, channel, sample) .+ sample[:offset][c]
 		end
 
 		means = mean(vals, dims = 1)[1, :]
@@ -321,6 +336,7 @@ biplot(samples, [0.95, 0.68, 0])
 # ╠═a6d96625-71e8-4b3a-b82e-9c21cdfdbab5
 # ╠═0af70b03-c53f-415d-8f4f-f8bf6c383f3f
 # ╠═6a91ffe3-d906-4269-9684-ac8ffa4f52c4
+# ╠═81a1e646-8e76-44cb-8302-5ec00134599e
 # ╠═4d347ae9-9b88-4a87-9459-5fec942cbd39
 # ╠═c330906f-36e8-4b53-b0fc-a4b632024169
 # ╠═c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -329,6 +345,7 @@ biplot(samples, [0.95, 0.68, 0])
 # ╠═4513a94d-e0af-4842-b9cb-03a3176acfe3
 # ╠═0c11e705-9921-4343-8ca9-b54ed3499af2
 # ╠═238b0807-35a4-40b9-b14e-1fabdd98cf3f
+# ╠═e6821d90-c833-4b6c-9af1-433aba401571
 # ╠═994aeb01-a8fb-4c15-af3e-f367fb237ae8
 # ╠═fa3c2c79-6de1-4c4e-b6ef-93983917779a
 # ╠═3cbab8f9-9416-4a17-8cf8-d5873a67dc72
