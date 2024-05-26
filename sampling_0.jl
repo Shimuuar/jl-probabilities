@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.42
 
 using Markdown
 using InteractiveUtils
@@ -22,15 +22,15 @@ begin
 	using StatsPlots
 
 	using KernelDensity
-	import PyPlot
+	# import PyPlot
 	using Roots
 	using Optim
 end
 
 # ╔═╡ 2c36d253-132b-471f-a395-28479e55562d
 begin
-	plotlyjs()
-	theme(:juno)
+	#plotlyjs()
+	#theme(:juno)
 end
 
 # ╔═╡ f32fdc1c-272a-48c5-8f18-4a292d72f643
@@ -105,7 +105,8 @@ chain_params = ChainParams(;
 	model_params,
 	channels,
 	init_params,
-	n_samples = 4096
+	n_chains=8,
+	n_samples = 120*4
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055

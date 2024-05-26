@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.42
 
 using Markdown
 using InteractiveUtils
@@ -22,15 +22,15 @@ begin
 	using StatsPlots
 
 	using KernelDensity
-	import PyPlot
+#	import PyPlot
 	using Roots
 	using Optim
 end
 
 # ╔═╡ 2c36d253-132b-471f-a395-28479e55562d
 begin
-	plotlyjs()
-	theme(:juno)
+#	plotlyjs()
+#	theme(:juno)
 end
 
 # ╔═╡ f32fdc1c-272a-48c5-8f18-4a292d72f643
