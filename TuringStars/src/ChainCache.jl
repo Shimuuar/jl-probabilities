@@ -53,19 +53,32 @@ function _uncached_sample(chain_params)
     if chain_params.init_params !== nothing
         syms = DynamicPPL.syms(DynamicPPL.VarInfo(model))
         init_params = chain_params.init_params[syms]
-        init_params_array = FillArrays.Fill(init_params, chain_params.n_chains)
+        if chain_params.n_chains == 1
+            init_params_array = init_params
+        else
+            init_params_array = FillArrays.Fill(init_params, chain_params.n_chains)
+        end
     else
         init_params_array = nothing
     end
 
-    return sample(
-        model,
-        chain_params.sampler,
-        MCMCThreads(),
-        chain_params.n_samples,
-        chain_params.n_chains,
-        initial_params=init_params_array 
-    )
+    if chain_params.n_chains == 1
+        return sample(
+            model,
+            chain_params.sampler,
+            chain_params.n_samples,
+            initial_params=init_params_array
+        )
+    else
+        return sample(
+            model,
+            chain_params.sampler,
+            MCMCThreads(),
+            chain_params.n_samples,
+            chain_params.n_chains,
+            initial_params=init_params_array
+        )
+    end
 end
 
 
