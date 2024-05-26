@@ -9,10 +9,18 @@ using FillArrays
 
 export
     cached_sample,
-    custom_pretty_json
+    custom_pretty_json,
+    load_cache,
+    hash_chain_params
+
+
+
+function hash_chain_params(chain_params)
+    return chain_params |> JSON3.write |> sha1 |> bytes2hex
+end
 
 function cached_sample(chain_params, cache_dir::String="cache")
-    chain_params_hash = chain_params |> JSON3.write |> sha1 |> bytes2hex
+    chain_params_hash = hash_chain_params(chain_params)
 
     cache_dir = joinpath(cache_dir, chain_params_hash)
     cache_file = joinpath(cache_dir, "chain.jls")
@@ -31,10 +39,16 @@ function cached_sample(chain_params, cache_dir::String="cache")
     end
 end
 
+function load_cache(chain_params_hash, cache_dir::String="cache")
+    cache_dir = joinpath(cache_dir, chain_params_hash)
+    cache_file = joinpath(cache_dir, "chain.jls")
+    return deserialize(cache_file)
+end
+
 
 function _uncached_sample(chain_params)
-    model_params = chain_params.model_params
-    model = model_params.model_function(model_params)
+    model_function = chain_params.model_params.model_function
+    model = model_function(chain_params.mesh_params, chain_params.model_params, chain_params.channels)
 
     if chain_params.init_params !== nothing
         syms = DynamicPPL.syms(DynamicPPL.VarInfo(model))
