@@ -104,7 +104,8 @@ chain_params = ChainParams(;
 	model_params,
 	channels,
 	init_params,
-	n_samples = 4096
+	n_chains = 8,
+	n_samples = 120*32
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -182,8 +183,14 @@ hash_chain_params(chain_params)
 # ╔═╡ 0c11e705-9921-4343-8ca9-b54ed3499af2
 samples = cached_sample(chain_params)
 
+# ╔═╡ f1f2fa6f-0373-4385-8762-365708bf41d8
+length(samples)
+
 # ╔═╡ 2034d233-293a-4f5e-bcb3-5236a66e6699
 (samples.info.stop_time - samples.info.start_time) / length(samples)
+
+# ╔═╡ c3eb662f-b75f-4033-948d-d830c418caf5
+(samples.info.stop_time - samples.info.start_time) / 3600
 
 # ╔═╡ 9773fc71-1335-4a4e-aaf0-505fc9a686dc
 begin
@@ -339,7 +346,9 @@ biplot(samples, [0.95, 0.68, 0], "black")
 # ╠═60698009-5b82-44e8-b8ee-da6432d8a227
 # ╠═97177b66-3f53-483e-a9e0-c31bf6852b5b
 # ╠═0c11e705-9921-4343-8ca9-b54ed3499af2
+# ╠═f1f2fa6f-0373-4385-8762-365708bf41d8
 # ╠═2034d233-293a-4f5e-bcb3-5236a66e6699
+# ╠═c3eb662f-b75f-4033-948d-d830c418caf5
 # ╠═9773fc71-1335-4a4e-aaf0-505fc9a686dc
 # ╠═994aeb01-a8fb-4c15-af3e-f367fb237ae8
 # ╠═fa3c2c79-6de1-4c4e-b6ef-93983917779a

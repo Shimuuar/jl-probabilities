@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.42
 
 using Markdown
 using InteractiveUtils
@@ -103,7 +103,8 @@ chain_params = ChainParams(;
 	model_params,
 	channels,
 	init_params,
-	n_samples = 4096
+	n_chains = 8,
+	n_samples = 120*8
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -181,8 +182,14 @@ hash_chain_params(chain_params)
 # ╔═╡ 0c11e705-9921-4343-8ca9-b54ed3499af2
 samples = cached_sample(chain_params)
 
+# ╔═╡ a06fa3fc-34d6-4909-84f0-7deb59561322
+length(samples)
+
 # ╔═╡ 2034d233-293a-4f5e-bcb3-5236a66e6699
 (samples.info.stop_time - samples.info.start_time) / length(samples)
+
+# ╔═╡ 94c3213c-d596-4041-a5b0-3cb3b79df823
+(samples.info.stop_time - samples.info.start_time) / 3600
 
 # ╔═╡ 802213be-600a-4f19-807d-bad83ac62257
 begin
@@ -338,7 +345,9 @@ biplot(samples, [0.95, 0.68, 0])
 # ╠═60698009-5b82-44e8-b8ee-da6432d8a227
 # ╠═97177b66-3f53-483e-a9e0-c31bf6852b5b
 # ╠═0c11e705-9921-4343-8ca9-b54ed3499af2
+# ╠═a06fa3fc-34d6-4909-84f0-7deb59561322
 # ╠═2034d233-293a-4f5e-bcb3-5236a66e6699
+# ╠═94c3213c-d596-4041-a5b0-3cb3b79df823
 # ╠═802213be-600a-4f19-807d-bad83ac62257
 # ╠═994aeb01-a8fb-4c15-af3e-f367fb237ae8
 # ╠═fa3c2c79-6de1-4c4e-b6ef-93983917779a
