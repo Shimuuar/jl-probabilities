@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.42
 
 using Markdown
 using InteractiveUtils
@@ -25,15 +25,15 @@ begin
 	using StatsPlots
 
 	using KernelDensity
-	import PyPlot
+	#import PyPlot
 	using Roots
 	using Optim
 end
 
 # ╔═╡ 2c36d253-132b-471f-a395-28479e55562d
 begin
-	plotlyjs()
-	theme(:juno)
+	#plotlyjs()
+	#theme(:juno)
 end
 
 # ╔═╡ f32fdc1c-272a-48c5-8f18-4a292d72f643
@@ -108,7 +108,8 @@ chain_params = ChainParams(;
 	model_params,
 	channels,
 	init_params,
-	n_samples = 4096
+	n_chains  = 8,
+	n_samples = 120*64
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -186,8 +187,14 @@ hash_chain_params(chain_params)
 # ╔═╡ 0c11e705-9921-4343-8ca9-b54ed3499af2
 samples = cached_sample(chain_params)
 
+# ╔═╡ 0e7dea0a-bfbe-4121-b91b-883115abbe66
+length(samples)
+
 # ╔═╡ 238b0807-35a4-40b9-b14e-1fabdd98cf3f
 (samples.info.stop_time - samples.info.start_time) / length(samples)
+
+# ╔═╡ c8c7711f-8a33-46bf-bafd-ebe9bbf0a1e0
+
 
 # ╔═╡ e6821d90-c833-4b6c-9af1-433aba401571
 begin
@@ -343,7 +350,9 @@ biplot(samples, [0.95, 0.68, 0])
 # ╠═60698009-5b82-44e8-b8ee-da6432d8a227
 # ╠═4513a94d-e0af-4842-b9cb-03a3176acfe3
 # ╠═0c11e705-9921-4343-8ca9-b54ed3499af2
+# ╠═0e7dea0a-bfbe-4121-b91b-883115abbe66
 # ╠═238b0807-35a4-40b9-b14e-1fabdd98cf3f
+# ╠═c8c7711f-8a33-46bf-bafd-ebe9bbf0a1e0
 # ╠═e6821d90-c833-4b6c-9af1-433aba401571
 # ╠═994aeb01-a8fb-4c15-af3e-f367fb237ae8
 # ╠═fa3c2c79-6de1-4c4e-b6ef-93983917779a
